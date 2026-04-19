@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Stellara — 우주 음악 탐험</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 body{background:#010006;overflow:hidden;font-family:'Apple SD Gothic Neo','Pretendard',system-ui,sans-serif;touch-action:none}
 canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
 #ui{position:fixed;inset:0;pointer-events:none;z-index:20;transition:opacity .6s ease}
@@ -2182,14 +2182,16 @@ animate();
 // 로딩
 const MSGS=['별빛을 모으는 중...','행성 궤도 계산 중...','성운을 배치하는 중...','우주가 열리고 있습니다...'];
 const bar=document.getElementById('ld-bar'), txt=document.getElementById('ld-txt');
-let _pct=0;
-const ldIv=setInterval(()=>{
+const ldIv=setInterval((()=>{
+  let _pct=0;
+  return ()=>{
   _pct=Math.min(100,_pct+Math.random()*16);
   const pct=_pct;
   bar.style.width=pct+'%';
   txt.textContent=MSGS[Math.min(3,Math.floor(pct/26))];
   if(pct>=100){clearInterval(ldIv);setTimeout(()=>document.getElementById('loading').classList.add('done'),400);}
-},110);
+};
+})(),110);
 
 window.addEventListener('resize',()=>{camera.aspect=W()/H();camera.updateProjectionMatrix();renderer.setSize(W(),H());});
 </script>
