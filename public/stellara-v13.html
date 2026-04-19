@@ -1309,10 +1309,15 @@ function exitBlackHole() {
   bhZoomProgress = 0;
   clearTimeout(bhInfoTimer);
   clearTimeout(minimalTimer);
-  setMinimalMode(false);
+  isMinimalMode = false;
   bhCamStart.copy(camera.position);
 
-  document.getElementById('planet-info').classList.remove('show');
+  // 패널 강제 숨김
+  const infoPanel = document.getElementById('planet-info');
+  infoPanel.classList.remove('show');
+  infoPanel.style.opacity = '0';
+  infoPanel.style.pointerEvents = 'none';
+
   document.getElementById('vignette').classList.remove('zoom');
   document.getElementById('letterbox-t').classList.add('on');
   document.getElementById('letterbox-b').classList.add('on');
@@ -1351,8 +1356,11 @@ function setMinimalMode(on) {
     panel.style.opacity = '0';
     panel.style.pointerEvents = 'none';
   } else {
-    panel.style.opacity = '1';
-    panel.style.pointerEvents = 'auto';
+    // .show 클래스가 있을 때만 복구 (우주 복귀 상태에선 건드리지 않음)
+    if(panel.classList.contains('show')) {
+      panel.style.opacity = '1';
+      panel.style.pointerEvents = 'auto';
+    }
   }
 }
 
@@ -1633,15 +1641,23 @@ function zoomOut() {
   camEndLook.set(0,0,0);
   const r=camDist;
   camEndPos.set(r*Math.sin(sph.ph)*Math.sin(sph.th),r*Math.cos(sph.ph),r*Math.sin(sph.ph)*Math.cos(sph.th));
-  document.getElementById('planet-info').classList.remove('show');
+
+  // 패널 강제 숨김 (classList + style 직접 제어)
+  const infoPanel = document.getElementById('planet-info');
+  infoPanel.classList.remove('show');
+  infoPanel.style.opacity = '0';
+  infoPanel.style.pointerEvents = 'none';
+
   document.getElementById('vignette').classList.remove('zoom');
   activePlanetGroup = null;
   document.getElementById('letterbox-t').classList.add('on');
   document.getElementById('letterbox-b').classList.add('on');
   document.getElementById('esc-hint').classList.remove('show');
-  // Task J: 미니멀 타이머 정리 + 패널 복구
+
+  // 미니멀 타이머 정리 (복구 없이 상태만 초기화)
   clearTimeout(minimalTimer);
-  setMinimalMode(false);
+  isMinimalMode = false;
+
   // 우주로 돌아오면 자동숨김 타이머 재시작
   clearTimeout(uiHideTimer);
   uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
