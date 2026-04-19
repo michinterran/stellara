@@ -118,7 +118,7 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
 #tooltip .tt-hint{font-size:10px;color:rgba(123,112,224,.4)}
 
 /* PLAYER */
-#player{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:20px;padding:14px 40px;background:linear-gradient(to top,rgba(1,0,6,.98) 0%,rgba(1,0,6,.6) 70%,transparent 100%);pointer-events:auto;transition:opacity .5s,transform .5s;z-index:31}
+#player{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:20px;padding:14px 40px;background:linear-gradient(to top,rgba(1,0,6,.98) 0%,rgba(1,0,6,.6) 70%,transparent 100%);pointer-events:auto;transition:opacity .5s,transform .5s;z-index:100}
 #player.out{opacity:0;transform:translateY(10px);pointer-events:none}
 .p-now{display:flex;align-items:center;gap:12px;min-width:0;flex:0 0 auto}
 .p-disc{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(155,145,255,.28);animation:spin 8s linear infinite}
@@ -330,7 +330,24 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
     <div class="tt-hint">클릭해서 탐험하기</div>
   </div>
 
-  <div id="player">
+  <div id="hint">행성을 클릭해 탐험하세요 · 드래그로 우주 회전 · 스크롤로 줌</div>
+
+  <!-- 셔플 버튼 (우주 메인화면 우하단) -->
+  <div id="shuffle-btn" onclick="shuffleTracks()" style="
+    position:absolute;bottom:80px;right:40px;
+    display:none;align-items:center;gap:6px;
+    font-size:11px;color:rgba(155,145,255,.5);cursor:pointer;pointer-events:auto;
+    background:rgba(20,16,60,.6);border:1px solid rgba(123,112,224,.25);
+    border-radius:16px;padding:7px 14px;backdrop-filter:blur(12px);
+    transition:all .25s;
+  ">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+    새로운 우주 배치
+  </div>
+</div>
+
+<!-- PLAYER: #ui 밖에 배치 — setUIVisible 영향 없이 항상 표시 -->
+<div id="player">
     <div class="p-now" style="cursor:pointer" onclick="returnToCurrentPlanet()" title="현재 재생 중인 행성으로 이동">
       <div class="p-disc" id="p-disc"><div class="p-disc-inner" id="p-disc-inner"></div></div>
       <div>
@@ -364,22 +381,6 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
     </div>
     <div class="p-plat" id="p-plat" onclick="showPlatformModal()">플랫폼 연결하기</div>
   </div>
-
-  <div id="hint">행성을 클릭해 탐험하세요 · 드래그로 우주 회전 · 스크롤로 줌</div>
-
-  <!-- 셔플 버튼 (우주 메인화면 우하단) -->
-  <div id="shuffle-btn" onclick="shuffleTracks()" style="
-    position:absolute;bottom:80px;right:40px;
-    display:none;align-items:center;gap:6px;
-    font-size:11px;color:rgba(155,145,255,.5);cursor:pointer;pointer-events:auto;
-    background:rgba(20,16,60,.6);border:1px solid rgba(123,112,224,.25);
-    border-radius:16px;padding:7px 14px;backdrop-filter:blur(12px);
-    transition:all .25s;
-  ">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-    새로운 우주 배치
-  </div>
-</div>
 
 <!-- YouTube IFrame (숨김) -->
 <div id="yt-player-container" style="position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;"></div>
@@ -1305,6 +1306,8 @@ function exitBlackHole() {
   zoomState = 'bh-zooming-out';
   bhZoomProgress = 0;
   clearTimeout(bhInfoTimer);
+  clearTimeout(minimalTimer);
+  setMinimalMode(false);
   bhCamStart.copy(camera.position);
 
   document.getElementById('planet-info').classList.remove('show');
@@ -1324,19 +1327,51 @@ let uiVisible = true;
 let uiHideTimer = null;
 const UI_HIDE_DELAY = 10000; // 10초 비활동 시 자동 숨김
 
+// ── Task J: 미니멀 UI 변수 ────────────────────────────────
+// landed 상태에서 10초 후 planet-info 패널만 숨김
+// #player는 #ui 밖에 있으므로 영향 없음
+let minimalTimer = null;
+let isMinimalMode = false;
+
 function setUIVisible(visible) {
   uiVisible = visible;
-  document.getElementById('ui').style.opacity = visible ? '1' : '0';
+  const ui = document.getElementById('ui');
+  ui.style.opacity = visible ? '1' : '0';
+  ui.style.pointerEvents = visible ? 'auto' : 'none';
+}
+
+// 미니멀 모드: landed 상태에서 planet-info 패널만 숨김
+function setMinimalMode(on) {
+  isMinimalMode = on;
+  const panel = document.getElementById('planet-info');
+  if(!panel) return;
+  if(on) {
+    panel.style.opacity = '0';
+    panel.style.pointerEvents = 'none';
+  } else {
+    panel.style.opacity = '1';
+    panel.style.pointerEvents = 'auto';
+  }
+}
+
+// 미니멀 타이머 리셋 (landed 상태에서 활동 시 호출)
+function resetMinimalTimer() {
+  if(zoomState !== 'landed' && zoomState !== 'bh-landed') return;
+  if(isMinimalMode) setMinimalMode(false);
+  clearTimeout(minimalTimer);
+  minimalTimer = setTimeout(() => setMinimalMode(true), UI_HIDE_DELAY);
 }
 
 // 활동 감지 시 UI 복구 + 자동숨김 타이머 리셋
 function onUserActivity() {
   if (!uiVisible) setUIVisible(true);
   clearTimeout(uiHideTimer);
-  // landed 상태(행성 착륙)에서는 자동숨김 안 함
+  // idle 상태에서만 자동숨김 (우주 스크린세이버)
   if (zoomState === 'idle') {
     uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
   }
+  // landed 상태에서는 미니멀 타이머 리셋
+  resetMinimalTimer();
 }
 
 // 처음 진입 시 자동숨김 타이머 시작
@@ -1578,6 +1613,11 @@ function landOnPlanet() {
   document.getElementById('letterbox-t').classList.remove('on');
   document.getElementById('letterbox-b').classList.remove('on');
 
+  // Task J: 착륙 시 미니멀 타이머 시작 (10초 후 패널 숨김)
+  setMinimalMode(false);
+  clearTimeout(minimalTimer);
+  minimalTimer = setTimeout(() => setMinimalMode(true), UI_HIDE_DELAY);
+
   setTimeout(() => {
     if(zoomState==='landed') document.getElementById('esc-hint').classList.add('show');
   }, 800);
@@ -1597,6 +1637,9 @@ function zoomOut() {
   document.getElementById('letterbox-t').classList.add('on');
   document.getElementById('letterbox-b').classList.add('on');
   document.getElementById('esc-hint').classList.remove('show');
+  // Task J: 미니멀 타이머 정리 + 패널 복구
+  clearTimeout(minimalTimer);
+  setMinimalMode(false);
   // 우주로 돌아오면 자동숨김 타이머 재시작
   clearTimeout(uiHideTimer);
   uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
