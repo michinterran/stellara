@@ -412,19 +412,112 @@ function showToast(msg, duration=3000) {
 }
 window.showToast = showToast;
 
-// ── YouTube IFrame Player ─────────────────────────────────
-let ytPlayer = null;
-let ytReady = false;
-let isPlaying = false;
-let progressTimer = null;
+// ══════════════════════════════════════════════════════════════
+// StellaraState — 단일 전역 상태 저장소
+// 기존에 파일 전체에 흩어진 let 변수들을 하나의 객체로 통합
+// Three.js 씬 초기화 이후에 정의 (Vector3 사용을 위해)
+// ══════════════════════════════════════════════════════════════
+const StellaraState = {
 
-// ── 재생 상태 전역 관리 ───────────────────────────────────
-let currentTrackList = [];       // 현재 행성의 트랙 배열 [{videoId, title}]
-let currentTrackIndex = 0;       // 현재 재생 중인 트랙 인덱스
-let playMode = 'sequential';     // 'sequential' | 'shuffle' | 'repeat'
-let currentPlaylistId = null;    // 현재 재생 중인 플레이리스트 ID (이어듣기 판단용)
-let currentPlanetHex = '';
-let currentPlanetDisc = '';
+  // 재생 상태 (구 415~427, 998번 줄 변수들)
+  playback: {
+    ytPlayer:          null,
+    ytReady:           false,
+    isPlaying:         false,
+    progressTimer:     null,
+    trackList:         [],         // 구 currentTrackList
+    trackIndex:        0,          // 구 currentTrackIndex
+    playMode:          'sequential',
+    playlistId:        null,       // 구 currentPlaylistId
+    planetHex:         '',
+    planetDisc:        '',
+    activePlanetGroup: null,       // 구 activePlanetGroup
+    currentPlanetGroup:null,       // 구 currentPlanetGroup
+  },
+
+  // 카메라 상태 (구 1187~1195번 줄 변수들)
+  camera: {
+    sph:       {th:0, ph:Math.PI/2-.08},
+    tSph:      {th:0, ph:Math.PI/2-.08},
+    dist:      130,
+    tDist:     130,
+    autoRot:   true,
+    autoTimer: null,
+    startPos:  new THREE.Vector3(),
+    endPos:    new THREE.Vector3(),
+    startLook: new THREE.Vector3(),
+    endLook:   new THREE.Vector3(),
+  },
+
+  // 줌/블랙홀 상태 (구 1193~1203번 줄 변수들)
+  zoom: {
+    state:      'idle', // 'idle'|'zooming-in'|'landed'|'zooming-out'
+                        // |'bh-zooming-in'|'bh-landed'|'bh-zooming-out'
+    target:     null,
+    progress:   0,
+    bhProgress: 0,
+    bhCamStart: new THREE.Vector3(),
+    bhInfoHidden: false,
+    bhInfoTimer:  null,
+  },
+
+  // UI 상태 (구 1344~1352번 줄 변수들)
+  ui: {
+    visible:       true,
+    hideTimer:     null,
+    isMinimalMode: false,
+    minimalTimer:  null,
+  },
+
+  // 무드 필터 상태 (구 1732~1734번 줄 변수들)
+  mood: {
+    active:    null,
+    fogTarget: new THREE.Color(0x010006),
+  },
+};
+
+// ── 하위 호환 별칭 (기존 코드가 직접 참조하는 변수명 유지) ──
+// 리팩토링 전환 기간 동안 기존 함수들이 그대로 작동하게 함
+// 추후 모든 참조를 StellaraState.xxx 로 바꾸면 이 블록 삭제 가능
+Object.defineProperties(window, {
+  zoomState:    { get(){ return StellaraState.zoom.state;       }, set(v){ StellaraState.zoom.state       = v; } },
+  zoomTarget:   { get(){ return StellaraState.zoom.target;      }, set(v){ StellaraState.zoom.target      = v; } },
+  zoomProgress: { get(){ return StellaraState.zoom.progress;    }, set(v){ StellaraState.zoom.progress    = v; } },
+  bhZoomProgress:{ get(){ return StellaraState.zoom.bhProgress; }, set(v){ StellaraState.zoom.bhProgress  = v; } },
+  bhCamStart:   { get(){ return StellaraState.zoom.bhCamStart;  }, set(v){ StellaraState.zoom.bhCamStart  = v; } },
+  bhInfoHidden: { get(){ return StellaraState.zoom.bhInfoHidden;}, set(v){ StellaraState.zoom.bhInfoHidden = v; } },
+  bhInfoTimer:  { get(){ return StellaraState.zoom.bhInfoTimer; }, set(v){ StellaraState.zoom.bhInfoTimer  = v; } },
+  sph:          { get(){ return StellaraState.camera.sph;       }, set(v){ StellaraState.camera.sph       = v; } },
+  tSph:         { get(){ return StellaraState.camera.tSph;      }, set(v){ StellaraState.camera.tSph      = v; } },
+  camDist:      { get(){ return StellaraState.camera.dist;      }, set(v){ StellaraState.camera.dist      = v; } },
+  tCamDist:     { get(){ return StellaraState.camera.tDist;     }, set(v){ StellaraState.camera.tDist     = v; } },
+  autoRot:      { get(){ return StellaraState.camera.autoRot;   }, set(v){ StellaraState.camera.autoRot   = v; } },
+  autoTimer:    { get(){ return StellaraState.camera.autoTimer; }, set(v){ StellaraState.camera.autoTimer  = v; } },
+  camStartPos:  { get(){ return StellaraState.camera.startPos;  }, set(v){ StellaraState.camera.startPos  = v; } },
+  camEndPos:    { get(){ return StellaraState.camera.endPos;    }, set(v){ StellaraState.camera.endPos    = v; } },
+  camStartLook: { get(){ return StellaraState.camera.startLook; }, set(v){ StellaraState.camera.startLook = v; } },
+  camEndLook:   { get(){ return StellaraState.camera.endLook;   }, set(v){ StellaraState.camera.endLook   = v; } },
+  uiVisible:    { get(){ return StellaraState.ui.visible;       }, set(v){ StellaraState.ui.visible       = v; } },
+  uiHideTimer:  { get(){ return StellaraState.ui.hideTimer;     }, set(v){ StellaraState.ui.hideTimer     = v; } },
+  isMinimalMode:{ get(){ return StellaraState.ui.isMinimalMode; }, set(v){ StellaraState.ui.isMinimalMode = v; } },
+  minimalTimer: { get(){ return StellaraState.ui.minimalTimer;  }, set(v){ StellaraState.ui.minimalTimer  = v; } },
+  activeMood:   { get(){ return StellaraState.mood.active;      }, set(v){ StellaraState.mood.active      = v; } },
+  fogTargetColor:{ get(){ return StellaraState.mood.fogTarget;  }, set(v){ StellaraState.mood.fogTarget   = v; } },
+  currentTrackList:  { get(){ return StellaraState.playback.trackList;  }, set(v){ StellaraState.playback.trackList  = v; } },
+  currentTrackIndex: { get(){ return StellaraState.playback.trackIndex; }, set(v){ StellaraState.playback.trackIndex = v; } },
+  playMode:          { get(){ return StellaraState.playback.playMode;   }, set(v){ StellaraState.playback.playMode   = v; } },
+  currentPlaylistId: { get(){ return StellaraState.playback.playlistId; }, set(v){ StellaraState.playback.playlistId = v; } },
+  currentPlanetHex:  { get(){ return StellaraState.playback.planetHex; }, set(v){ StellaraState.playback.planetHex  = v; } },
+  currentPlanetDisc: { get(){ return StellaraState.playback.planetDisc;}, set(v){ StellaraState.playback.planetDisc = v; } },
+  activePlanetGroup: { get(){ return StellaraState.playback.activePlanetGroup; }, set(v){ StellaraState.playback.activePlanetGroup = v; } },
+  currentPlanetGroup:{ get(){ return StellaraState.playback.currentPlanetGroup;}, set(v){ StellaraState.playback.currentPlanetGroup= v; } },
+  ytPlayer:  { get(){ return StellaraState.playback.ytPlayer;  }, set(v){ StellaraState.playback.ytPlayer  = v; } },
+  ytReady:   { get(){ return StellaraState.playback.ytReady;   }, set(v){ StellaraState.playback.ytReady   = v; } },
+  isPlaying: { get(){ return StellaraState.playback.isPlaying; }, set(v){ StellaraState.playback.isPlaying = v; } },
+  progressTimer:{ get(){ return StellaraState.playback.progressTimer; }, set(v){ StellaraState.playback.progressTimer = v; } },
+});
+
+// ── YouTube IFrame Player ─────────────────────────────────
 
 window.onYouTubeIframeAPIReady = function() {
   ytPlayer = new YT.Player('yt-player-container', {
@@ -995,7 +1088,6 @@ void main(){
 }`;}
 
 const planetMeshes=[], planetGroups=[];
-let activePlanetGroup = null;  // 재생 중인 행성 (이펙트용)
 
 // ── 행성 그룹 생성 ───────────────────────────────────────────
 function createPlanetGroup(d, idx) {
@@ -1184,23 +1276,217 @@ class ShootingStar{
 const shooters=Array.from({length:5},()=>new ShootingStar());
 
 // ── CAMERA CONTROL ───────────────────────────────────────────
-let sph={th:0,ph:Math.PI/2-.08}, tSph={th:0,ph:Math.PI/2-.08};
-let camDist=130, tCamDist=130;
-let autoRot=true, autoTimer=null;
-let isDrag=false, prevM={x:0,y:0};
+// 카메라/줌 상태는 StellaraState.camera / StellaraState.zoom 으로 통합됨
+// 하위 호환 별칭(defineProperties)으로 기존 코드 그대로 작동
 const mouse=new THREE.Vector2(-9,-9);
 const raycaster=new THREE.Raycaster();
-let zoomState='idle', zoomTarget=null, zoomProgress=0;
-let camStartPos=new THREE.Vector3(), camEndPos=new THREE.Vector3();
-let camStartLook=new THREE.Vector3(), camEndLook=new THREE.Vector3();
 
-// ── Phase 1: 블랙홀 상태 변수 ────────────────────────────
-// 'idle' | 'zooming-in' | 'landed' | 'zooming-out'
-// | 'bh-zooming-in' | 'bh-landed' | 'bh-zooming-out'
-let bhZoomProgress = 0;
-let bhCamStart = new THREE.Vector3();
-let bhInfoHidden = false;    // 5초 정보 숨김 여부
-let bhInfoTimer = null;
+// ══════════════════════════════════════════════════════════════
+// InputManager — 이벤트 핸들링 전담 클래스
+// 캔버스 이벤트(회전/줌/클릭)와 UI 버튼 이벤트를 명확히 분리
+// 모든 입력 상태(isDrag, prevM, 터치 변수)는 이 클래스 내부에만 존재
+// ══════════════════════════════════════════════════════════════
+class InputManager {
+  constructor(canvas, cam) {
+    this.canvas = canvas;
+    this.cam    = cam;
+
+    // 내부 상태 (기존 전역 let 변수 대체)
+    this.isDrag        = false;
+    this.prevM         = {x:0, y:0};
+    this.touchMoved    = false;
+    this.touchStartPos = {x:0, y:0};
+    this.pinchStartDist= 0;
+    this.isPinching    = false;
+    this.lastTouchTime = 0;
+
+    // 하위 호환: 기존 코드가 직접 참조하는 prevM을 window에도 노출
+    Object.defineProperty(window, 'prevM', {
+      get: () => this.prevM,
+      set: (v) => { this.prevM = v; },
+      configurable: true,
+    });
+    Object.defineProperty(window, 'isDrag', {
+      get: () => this.isDrag,
+      set: (v) => { this.isDrag = v; },
+      configurable: true,
+    });
+
+    this._bind();
+  }
+
+  _pinchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  _bind() {
+    const c = this.canvas;
+
+    // ── 마우스 (PC) ──────────────────────────────────────────
+    c.addEventListener('mousedown', e => {
+      onUserActivity();
+      if(zoomState !== 'idle') return;
+      this.isDrag = true;
+      StellaraState.camera.autoRot = false;
+      this.prevM = {x: e.clientX, y: e.clientY};
+      clearTimeout(StellaraState.camera.autoTimer);
+    });
+
+    window.addEventListener('mousemove', e => {
+      onUserActivity();
+      mouse.x =  (e.clientX / W()) * 2 - 1;
+      mouse.y = -(e.clientY / H()) * 2 + 1;
+      if(!this.isDrag || zoomState !== 'idle') return;
+      const dx = e.clientX - this.prevM.x;
+      const dy = e.clientY - this.prevM.y;
+      tSph.th -= dx * .004;
+      tSph.ph  = clamp(tSph.ph + dy * .004, .15, Math.PI - .15);
+      this.prevM = {x: e.clientX, y: e.clientY};
+    });
+
+    window.addEventListener('mouseup', () => { this.isDrag = false; startAuto(); });
+
+    c.addEventListener('wheel', e => {
+      onUserActivity();
+      if(zoomState !== 'idle') return;
+      tCamDist = clamp(tCamDist + e.deltaY * .12, 50, 220);
+      StellaraState.camera.autoRot = false;
+      startAuto();
+    }, {passive: true});
+
+    // ── 터치 (모바일) ─────────────────────────────────────────
+    c.addEventListener('touchstart', e => {
+      onUserActivity();
+      if(e.target !== c) return;
+      e.preventDefault();
+      if(e.touches.length === 1) {
+        this.isPinching    = false;
+        this.touchMoved    = false;
+        this.touchStartPos = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        this.prevM         = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        if(zoomState === 'idle') {
+          this.isDrag = true;
+          StellaraState.camera.autoRot = false;
+          clearTimeout(StellaraState.camera.autoTimer);
+        }
+      } else if(e.touches.length === 2) {
+        this.isDrag         = false;
+        this.isPinching     = true;
+        this.pinchStartDist = this._pinchDist(e.touches);
+        StellaraState.camera.autoRot = false;
+        clearTimeout(StellaraState.camera.autoTimer);
+      }
+    }, {passive: false});
+
+    c.addEventListener('touchmove', e => {
+      onUserActivity();
+      if(e.target !== c) return;
+      e.preventDefault();
+      if(e.touches.length === 1 && this.isDrag && zoomState === 'idle') {
+        const dx = e.touches[0].clientX - this.prevM.x;
+        const dy = e.touches[0].clientY - this.prevM.y;
+        if(Math.abs(e.touches[0].clientX - this.touchStartPos.x) > 5 ||
+           Math.abs(e.touches[0].clientY - this.touchStartPos.y) > 5) this.touchMoved = true;
+        tSph.th -= dx * .005;
+        tSph.ph  = clamp(tSph.ph + dy * .005, .15, Math.PI - .15);
+        this.prevM = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        mouse.x =  (e.touches[0].clientX / W()) * 2 - 1;
+        mouse.y = -(e.touches[0].clientY / H()) * 2 + 1;
+      } else if(e.touches.length === 2 && this.isPinching) {
+        const dist  = this._pinchDist(e.touches);
+        tCamDist    = clamp(tCamDist + (this.pinchStartDist - dist) * .25, 50, 220);
+        this.pinchStartDist = dist;
+      }
+    }, {passive: false});
+
+    c.addEventListener('touchend', e => {
+      onUserActivity();
+      if(e.target !== c) return;
+      if(zoomState === 'landed') {
+        if(!this.touchMoved) {
+          const now = Date.now();
+          if(now - this.lastTouchTime < 350) zoomOut();
+          this.lastTouchTime = now;
+        }
+        this.isDrag = false; this.isPinching = false; startAuto();
+        return;
+      }
+      if(!this.touchMoved && zoomState === 'idle' && e.changedTouches.length === 1) {
+        const tx = e.changedTouches[0].clientX;
+        const ty = e.changedTouches[0].clientY;
+        mouse.x =  (tx / W()) * 2 - 1;
+        mouse.y = -(ty / H()) * 2 + 1;
+        raycaster.setFromCamera(mouse, this.cam);
+        const bhHits = raycaster.intersectObject(bhCoreMesh);
+        if(bhHits.length > 0) { enterBlackHole(); this.isDrag = false; this.isPinching = false; return; }
+        const hits = raycaster.intersectObjects(planetMeshes);
+        if(hits.length > 0) { zoomIn(hits[0].object.parent); }
+        else { handleEmptySpaceClick(tx, ty); }
+      }
+      this.isDrag = false; this.isPinching = false;
+      if(e.touches.length === 0) startAuto();
+    }, {passive: true});
+
+    // ── 키보드 / 더블클릭 / PC 클릭 ─────────────────────────
+    window.addEventListener('keydown', e => {
+      if(e.key === 'Escape') { zoomOut(); exitBlackHole(); }
+    });
+
+    c.addEventListener('dblclick', () => {
+      if(zoomState === 'landed')    zoomOut();
+      if(zoomState === 'bh-landed') exitBlackHole();
+    });
+
+    c.addEventListener('click', e => {
+      if(e.pointerType === 'touch') return;
+      if(Math.abs(e.clientX - this.prevM.x) > 5 || zoomState !== 'idle') return;
+      raycaster.setFromCamera(mouse, this.cam);
+      const bhHits = raycaster.intersectObject(bhCoreMesh);
+      if(bhHits.length > 0) { enterBlackHole(); return; }
+      const hits = raycaster.intersectObjects(planetMeshes);
+      if(hits.length > 0) { zoomIn(hits[0].object.parent); }
+      else { handleEmptySpaceClick(e.clientX, e.clientY); }
+    });
+  }
+
+  // animate 루프에서 호출 — 호버 처리 일원화
+  updateHover(tooltip) {
+    if(zoomState !== 'idle') return;
+    raycaster.setFromCamera(mouse, this.cam);
+    const bhHover = raycaster.intersectObject(bhCoreMesh);
+    if(bhHover.length > 0) {
+      document.body.style.cursor = 'pointer';
+      document.getElementById('tt-name').textContent = '블랙홀';
+      document.getElementById('tt-mood').textContent = 'Cosmic Mix · 클릭해서 탐험';
+      const sv = new THREE.Vector3(0,0,0).project(this.cam);
+      tooltip.style.cssText = `opacity:1;left:${(sv.x*.5+.5)*W()+18}px;top:${(-sv.y*.5+.5)*H()-72}px;position:absolute`;
+      return;
+    }
+    const hits = raycaster.intersectObjects(planetMeshes);
+    if(hits.length > 0) {
+      const g = hits[0].object.parent;
+      document.body.style.cursor = 'pointer';
+      document.getElementById('tt-name').textContent = g.userData.name;
+      const n = g.userData.ytTrackCount || g.userData.tracks?.length || 0;
+      document.getElementById('tt-mood').textContent =
+        (g.userData.isYt ? 'YouTube Music' : g.userData.mood + ' 무드') + ' · ' + n + '개 트랙';
+      const sv = g.position.clone().project(this.cam);
+      tooltip.style.cssText = `opacity:1;left:${(sv.x*.5+.5)*W()+18}px;top:${(-sv.y*.5+.5)*H()-72}px;position:absolute`;
+      if(g.children[3]?.material) g.children[3].material.opacity = .14;
+      if(g.children[4]?.material) g.children[4].material.opacity = .04;
+    } else {
+      if(window._hovered) {
+        if(window._hovered.children[3]?.material) window._hovered.children[3].material.opacity = .065;
+        if(window._hovered.children[4]?.material) window._hovered.children[4].material.opacity = .022;
+        window._hovered = null;
+      }
+      document.body.style.cursor = 'default';
+      tooltip.style.opacity = '0';
+    }
+  }
+}
 
 // 블랙홀 진입 — 시네마틱 빨려들어가기
 function enterBlackHole() {
@@ -1341,15 +1627,9 @@ function exitBlackHole() {
 
 // ── UI 토글 / 스크린세이버 ────────────────────────────────
 // 철학: 우주 몰입을 위해 UI를 완전히 지울 수 있어야 한다
-let uiVisible = true;
-let uiHideTimer = null;
+// uiVisible, uiHideTimer, minimalTimer, isMinimalMode →
+// StellaraState.ui.* 로 통합됨 (defineProperties 별칭 적용)
 const UI_HIDE_DELAY = 10000; // 10초 비활동 시 자동 숨김
-
-// ── Task J: 미니멀 UI 변수 ────────────────────────────────
-// landed 상태에서 10초 후 planet-info 패널만 숨김
-// #player는 #ui 밖에 있으므로 영향 없음
-let minimalTimer = null;
-let isMinimalMode = false;
 
 function setUIVisible(visible) {
   uiVisible = visible;
@@ -1420,122 +1700,19 @@ function handleEmptySpaceClick(clientX, clientY) {
   }
 }
 
-const startAuto=()=>{clearTimeout(autoTimer);autoTimer=setTimeout(()=>{autoRot=true;},3500);};
+// startAuto — StellaraState 참조
+const startAuto = () => {
+  clearTimeout(StellaraState.camera.autoTimer);
+  StellaraState.camera.autoTimer = setTimeout(() => {
+    StellaraState.camera.autoRot = true;
+  }, 3500);
+};
 
-// ── 마우스 이벤트 (PC) ────────────────────────────────────
-renderer.domElement.addEventListener('mousedown',e=>{
-  onUserActivity();
-  if(zoomState!=='idle')return;
-  isDrag=true; autoRot=false;
-  prevM={x:e.clientX,y:e.clientY};
-  clearTimeout(autoTimer);
-});
-window.addEventListener('mousemove',e=>{
-  onUserActivity();
-  mouse.x=(e.clientX/W())*2-1; mouse.y=-(e.clientY/H())*2+1;
-  if(!isDrag||zoomState!=='idle')return;
-  const dx=e.clientX-prevM.x, dy=e.clientY-prevM.y;
-  tSph.th-=dx*.004; tSph.ph=clamp(tSph.ph+dy*.004,.15,Math.PI-.15);
-  prevM={x:e.clientX,y:e.clientY};
-});
-window.addEventListener('mouseup',()=>{isDrag=false;startAuto();});
-renderer.domElement.addEventListener('wheel',e=>{
-  onUserActivity();
-  if(zoomState!=='idle')return;
-  tCamDist=clamp(tCamDist+e.deltaY*.12,50,220);
-  autoRot=false; startAuto();
-},{passive:true});
+// InputManager 인스턴스 생성 — 모든 캔버스/키보드 이벤트 위임
+const input = new InputManager(renderer.domElement, camera);
 
-// ── 터치 이벤트 (모바일) ─────────────────────────────────
-// 터치 상태 변수
-let touchStartPos = {x:0,y:0};   // 터치 시작 위치 (탭/드래그 판별용)
-let touchMoved = false;           // 드래그 여부
-let pinchStartDist = 0;           // 핀치 시작 거리
-let isPinching = false;           // 핀치 중 여부
-
-// 두 손가락 사이 거리 계산
-function getPinchDist(touches) {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx*dx + dy*dy);
-}
-
-renderer.domElement.addEventListener('touchstart', e => {
-  onUserActivity();
-  if(e.target !== renderer.domElement) return;
-  e.preventDefault();
-
-  if(e.touches.length === 1) {
-    isPinching = false;
-    touchMoved = false;
-    touchStartPos = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-    prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-    if(zoomState==='idle'){isDrag=true; autoRot=false; clearTimeout(autoTimer);}
-  } else if(e.touches.length === 2) {
-    isDrag = false;
-    isPinching = true;
-    pinchStartDist = getPinchDist(e.touches);
-    autoRot=false; clearTimeout(autoTimer);
-  }
-},{passive:false});
-
-renderer.domElement.addEventListener('touchmove', e => {
-  onUserActivity();
-  if(e.target !== renderer.domElement) return;
-  e.preventDefault();
-
-  if(e.touches.length === 1 && isDrag && zoomState==='idle') {
-    const dx = e.touches[0].clientX - prevM.x;
-    const dy = e.touches[0].clientY - prevM.y;
-    if(Math.abs(e.touches[0].clientX-touchStartPos.x)>5 ||
-       Math.abs(e.touches[0].clientY-touchStartPos.y)>5) touchMoved=true;
-    tSph.th -= dx*.005;
-    tSph.ph = clamp(tSph.ph+dy*.005, .15, Math.PI-.15);
-    prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-    mouse.x=(e.touches[0].clientX/W())*2-1;
-    mouse.y=-(e.touches[0].clientY/H())*2+1;
-  } else if(e.touches.length === 2 && isPinching) {
-    const dist = getPinchDist(e.touches);
-    const delta = pinchStartDist - dist;
-    tCamDist = clamp(tCamDist + delta*.25, 50, 220);
-    pinchStartDist = dist;
-  }
-},{passive:false});
-
-renderer.domElement.addEventListener('touchend', e => {
-  onUserActivity();
-  if(e.target !== renderer.domElement) return;
-
-  if(zoomState==='landed') {
-    if(!touchMoved) {
-      const now=Date.now();
-      if(now-lastTouchTime<350) zoomOut();
-      lastTouchTime=now;
-    }
-    isDrag=false; isPinching=false; startAuto();
-    return;
-  }
-
-  if(!touchMoved && zoomState==='idle' && e.changedTouches.length===1) {
-    const tx=e.changedTouches[0].clientX;
-    const ty=e.changedTouches[0].clientY;
-    mouse.x=(tx/W())*2-1;
-    mouse.y=-(ty/H())*2+1;
-    raycaster.setFromCamera(mouse,camera);
-    // 블랙홀 먼저 체크
-    const bhHits = raycaster.intersectObject(bhCoreMesh);
-    if(bhHits.length>0) { enterBlackHole(); isDrag=false; isPinching=false; return; }
-    const hits=raycaster.intersectObjects(planetMeshes);
-    if(hits.length>0) {
-      zoomIn(hits[0].object.parent);
-    } else {
-      handleEmptySpaceClick(tx, ty);
-    }
-  }
-
-  isDrag=false; isPinching=false;
-  if(e.touches.length===0) startAuto();
-},{passive:true});
+// UI 버튼 이벤트 (캔버스 외부 — InputManager 범위 밖)
+document.getElementById('pi-back').addEventListener('click', () => { zoomOut(); exitBlackHole(); });
 
 // ── ZOOM ────────────────────────────────────────────────────
 function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
@@ -1676,35 +1853,6 @@ function zoomOut() {
   uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
 }
 
-document.getElementById('pi-back').addEventListener('click', ()=>{ zoomOut(); exitBlackHole(); });
-window.addEventListener('keydown', e => {
-  if(e.key==='Escape') { zoomOut(); exitBlackHole(); }
-});
-renderer.domElement.addEventListener('dblclick', ()=>{
-  if(zoomState==='landed') zoomOut();
-  if(zoomState==='bh-landed') exitBlackHole();
-});
-
-// PC 마우스 클릭으로 행성/블랙홀 선택 or 빈공간 UI 토글
-renderer.domElement.addEventListener('click', e => {
-  if(e.pointerType==='touch') return;
-  if(Math.abs(e.clientX-prevM.x)>5||zoomState!=='idle') return;
-  raycaster.setFromCamera(mouse, camera);
-  // 블랙홀 먼저 체크
-  const bhHits = raycaster.intersectObject(bhCoreMesh);
-  if(bhHits.length>0) { enterBlackHole(); return; }
-  // 행성 체크
-  const hits=raycaster.intersectObjects(planetMeshes);
-  if(hits.length>0) {
-    zoomIn(hits[0].object.parent);
-  } else {
-    handleEmptySpaceClick(e.clientX, e.clientY);
-  }
-});
-
-// 더블탭 시간 추적 (touchend에서 사용)
-let lastTouchTime = 0;
-
 // ── Task K: 무드 성단 필터링 + DJ 감성 스크립트 ──────────
 
 // DJ 감성 멘트 — 알고리즘이 아닌 우주의 목소리
@@ -1728,10 +1876,8 @@ const MOOD_FOG = {
   'default':   new THREE.Color(0x010006),
 };
 
-// 현재 선택된 무드
-let activeMood = null;
-// 안개 목표 색상 (animate 루프에서 lerp)
-let fogTargetColor = new THREE.Color(0x010006);
+// 현재 선택된 무드 / 안개 목표 색상 →
+// StellaraState.mood.active / StellaraState.mood.fogTarget 으로 통합됨
 
 // DJ 메시지 표시
 function showDJMessage(mood) {
@@ -2112,45 +2258,8 @@ function animate(){
     camera.position.set(r*Math.sin(sph.ph)*Math.sin(sph.th),r*Math.cos(sph.ph),r*Math.sin(sph.ph)*Math.cos(sph.th));
     camera.lookAt(0,0,0);
 
-    // 호버
-    raycaster.setFromCamera(mouse,camera);
-    // 블랙홀 호버 체크
-    const bhHover = raycaster.intersectObject(bhCoreMesh);
-    if(bhHover.length>0) {
-      document.body.style.cursor='pointer';
-      document.getElementById('tt-name').textContent='블랙홀';
-      document.getElementById('tt-mood').textContent='Cosmic Mix · 클릭해서 탐험';
-      const sv=new THREE.Vector3(0,0,0).project(camera);
-      const sx=(sv.x*.5+.5)*W(), sy=(-sv.y*.5+.5)*H();
-      tooltip.style.cssText=`opacity:1;left:${sx+18}px;top:${sy-72}px;position:absolute`;
-      if(hovered){
-        if(hovered.children[3]?.material) hovered.children[3].material.opacity=.065;
-        if(hovered.children[4]?.material) hovered.children[4].material.opacity=.022;
-        hovered=null;
-      }
-    } else {
-    const hits=raycaster.intersectObjects(planetMeshes);
-    if(hits.length>0){
-      const g=hits[0].object.parent;
-      if(hovered!==g){ hovered=g; document.body.style.cursor='pointer'; }
-      document.getElementById('tt-name').textContent=g.userData.name;
-      const trackNum = g.userData.ytTrackCount || g.userData.tracks?.length || 0;
-      document.getElementById('tt-mood').textContent=(g.userData.isYt?'YouTube Music':g.userData.mood+' 무드')+' · '+trackNum+'개 트랙';
-      const sv=g.position.clone().project(camera);
-      const sx=(sv.x*.5+.5)*W(),sy=(-sv.y*.5+.5)*H();
-      tooltip.style.cssText=`opacity:1;left:${sx+18}px;top:${sy-72}px;position:absolute`;
-      if(g.children[3]?.material) g.children[3].material.opacity=.14;
-      if(g.children[4]?.material) g.children[4].material.opacity=.04;
-    } else {
-      if(hovered){
-        if(hovered.children[3]?.material) hovered.children[3].material.opacity=.065;
-        if(hovered.children[4]?.material) hovered.children[4].material.opacity=.022;
-        hovered=null;
-      }
-      document.body.style.cursor='default';
-      tooltip.style.opacity='0';
-    }
-    } // end bhHover else
+    // 호버 — InputManager에 위임 (40줄 → 1줄)
+    input.updateHover(tooltip);
   } else if(zoomState==='landed'){
     const d=zoomTarget.userData, pp=zoomTarget.position, angle=t*.18, orbitR=d.r*4;
     camera.position.x=pp.x+Math.sin(angle)*orbitR;
