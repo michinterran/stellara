@@ -804,11 +804,19 @@ addStars(400,250,2.5,0xFFFFFF,.9);
 
 // ── BLACK HOLE ───────────────────────────────────────────────
 const bh=new THREE.Group();
+// 블랙홀 코어: raycaster 클릭 감지용으로 별도 저장
+const bhCoreMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(14,32,32), // 실제 구체(4)보다 넓은 클릭 영역
+  new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0})
+);
+bh.add(bhCoreMesh); // index 0 = 클릭 영역 (투명)
 bh.add(new THREE.Mesh(new THREE.SphereGeometry(4,32,32),new THREE.MeshBasicMaterial({color:0x000000})));
 [8,13,19,28,40].forEach((r,i)=>{
   const t=new THREE.Mesh(new THREE.TorusGeometry(r,.22-i*.025,4,80),new THREE.MeshBasicMaterial({color:[0x7B70E0,0x9B91FF,0x534AB7,0x3D1A7A,0x1A0A3A][i],transparent:true,opacity:.68-i*.11,depthWrite:false}));
   t.rotation.x=Math.PI/2+i*.14; t.rotation.z=i*.3; bh.add(t);
 });
+// 블랙홀 어크리션 디스크 파티클
+// children: [0]=클릭영역(투명), [1]=코어구체, [2~6]=링5개, [7]=파티클
 const adG=new THREE.BufferGeometry(), adP=new Float32Array(2000*3);
 for(let i=0;i<2000;i++){const a=rand(0,Math.PI*2),r=rand(6,46);adP[i*3]=Math.cos(a)*r;adP[i*3+1]=rand(-.35,.35)*(1-r/50);adP[i*3+2]=Math.sin(a)*r;}
 adG.setAttribute('position',new THREE.BufferAttribute(adP,3));
@@ -1137,6 +1145,153 @@ let zoomState='idle', zoomTarget=null, zoomProgress=0;
 let camStartPos=new THREE.Vector3(), camEndPos=new THREE.Vector3();
 let camStartLook=new THREE.Vector3(), camEndLook=new THREE.Vector3();
 
+// ── Phase 1: 블랙홀 상태 변수 ────────────────────────────
+// 'idle' | 'zooming-in' | 'landed' | 'zooming-out'
+// | 'bh-zooming-in' | 'bh-landed' | 'bh-zooming-out'
+let bhZoomProgress = 0;
+let bhCamStart = new THREE.Vector3();
+let bhInfoHidden = false;    // 5초 정보 숨김 여부
+let bhInfoTimer = null;
+
+// 블랙홀 진입 — 시네마틱 빨려들어가기
+function enterBlackHole() {
+  if(zoomState !== 'idle') return;
+  zoomState = 'bh-zooming-in';
+  bhZoomProgress = 0;
+  bhCamStart.copy(camera.position);
+  autoRot = false;
+  clearTimeout(autoTimer);
+
+  // UI: hero/hint 숨김, vignette 강하게
+  setUIVisible(true); clearTimeout(uiHideTimer);
+  document.getElementById('hero').classList.add('out');
+  document.getElementById('hint').classList.add('out');
+  document.getElementById('vignette').classList.add('zoom');
+  document.getElementById('letterbox-t').classList.add('on');
+  document.getElementById('letterbox-b').classList.add('on');
+  document.getElementById('tooltip').style.opacity='0';
+}
+
+// 블랙홀 착륙 — Cosmic Mix 시작
+function landOnBlackHole() {
+  zoomState = 'bh-landed';
+
+  // Cosmic Mix: 모든 YouTube 트랙을 모아서 랜덤 섞기
+  const allTracks = [];
+  planetGroups.forEach(g => {
+    if(g.userData.isYt && window._allYtItems) return; // 플레이리스트 ID 있는 행성
+    // currentTrackList 재사용 못 하므로 userData에서 수집
+  });
+
+  // 우연의 미학: 5초간 곡 정보 숨김
+  bhInfoHidden = true;
+  showCosmicMixUI(true); // 정보 숨김 상태로 UI 표시
+
+  // YouTube 전체 트랙 수집 후 랜덤 재생
+  loadCosmicMixTracks().then(tracks => {
+    if(tracks.length === 0) {
+      showToast('플레이리스트를 먼저 연결해주세요');
+      exitBlackHole(); return;
+    }
+    // 랜덤 셔플
+    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+    currentTrackList = shuffled;
+    currentTrackIndex = 0;
+    currentPlaylistId = '__cosmic_mix__';
+
+    // 음악 먼저 재생
+    playTrackByIndex(0);
+    updatePlayerUI('Cosmic Mix', '#9B91FF', 'rgba(155,145,255,.6)');
+
+    // 5초 후 곡 정보 표시
+    bhInfoTimer = setTimeout(() => {
+      bhInfoHidden = false;
+      showCosmicMixUI(false);
+    }, 5000);
+  });
+}
+
+// Cosmic Mix UI 표시/숨김
+function showCosmicMixUI(hidden) {
+  const panel = document.getElementById('planet-info');
+  const nameEl = document.getElementById('pi-name');
+  const eyebrowEl = document.getElementById('pi-eyebrow');
+  const moodEl = document.getElementById('pi-mood');
+  const tracksEl = document.getElementById('pi-tracks');
+
+  panel.classList.add('show');
+  document.getElementById('letterbox-t').classList.remove('on');
+  document.getElementById('letterbox-b').classList.remove('on');
+
+  if(hidden) {
+    eyebrowEl.textContent = '블랙홀 · Cosmic Mix';
+    nameEl.innerHTML = '<span style="letter-spacing:.1em;opacity:.4;font-size:28px">▓ ▓ ▓ ▓ ▓ ▓ ▓</span>';
+    moodEl.textContent = '우주의 신호가 도달하는 중...';
+    tracksEl.innerHTML = '<div style="color:rgba(155,145,255,.3);font-size:12px;padding:20px 0;text-align:center;letter-spacing:.08em">5초 후 공개됩니다</div>';
+  } else {
+    eyebrowEl.textContent = 'Cosmic Mix · ' + currentTrackList.length + '개 트랙';
+    nameEl.innerHTML = '블랙홀';
+    moodEl.textContent = '우주의 모든 음악이 섞였습니다';
+    // 트랙 목록 표시
+    tracksEl.innerHTML = currentTrackList.slice(0, 30).map((tr, i) => `
+      <div class="pi-track" id="track-item-${i}" onclick="playTrackByIndex(${i})">
+        <div class="pi-track-num">${i+1}</div>
+        <div class="pi-track-info">
+          <div class="pi-track-title">${tr.title.replace(/'/g,"&#39;")}</div>
+          <div class="pi-track-dur">Cosmic Mix</div>
+        </div>
+        <div class="pi-track-btn" style="border-color:#9B91FF44">
+          <svg viewBox="0 0 24 24" style="fill:#9B91FF"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+      </div>`).join('');
+    highlightCurrentTrack();
+  }
+}
+
+// 모든 플레이리스트에서 트랙 수집
+async function loadCosmicMixTracks() {
+  const token = window._ytToken;
+  if(!token || !window._allYtItems?.length) return [];
+  const allTracks = [];
+  // 최대 3개 플레이리스트에서 각 20곡씩 (성능 고려)
+  const targets = [...window._allYtItems].sort(() => Math.random()-0.5).slice(0,3);
+  for(const pl of targets) {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=20`,
+        { headers:{Authorization:'Bearer '+token} }
+      );
+      const data = await res.json();
+      if(data.items) {
+        const tracks = data.items
+          .filter(item=>item.snippet?.resourceId?.videoId)
+          .map(item=>({videoId:item.snippet.resourceId.videoId, title:item.snippet.title}));
+        allTracks.push(...tracks);
+      }
+    } catch(e) {}
+  }
+  return allTracks;
+}
+
+// 블랙홀 탈출
+function exitBlackHole() {
+  if(zoomState !== 'bh-landed') return;
+  zoomState = 'bh-zooming-out';
+  bhZoomProgress = 0;
+  clearTimeout(bhInfoTimer);
+  bhCamStart.copy(camera.position);
+
+  document.getElementById('planet-info').classList.remove('show');
+  document.getElementById('vignette').classList.remove('zoom');
+  document.getElementById('letterbox-t').classList.add('on');
+  document.getElementById('letterbox-b').classList.add('on');
+  document.getElementById('esc-hint').classList.remove('show');
+
+  // 우주로 복귀 후 자동숨김 타이머 재시작
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
+}
+
 // ── UI 토글 / 스크린세이버 ────────────────────────────────
 // 철학: 우주 몰입을 위해 UI를 완전히 지울 수 있어야 한다
 let uiVisible = true;
@@ -1285,11 +1440,13 @@ renderer.domElement.addEventListener('touchend', e => {
     mouse.x=(tx/W())*2-1;
     mouse.y=-(ty/H())*2+1;
     raycaster.setFromCamera(mouse,camera);
+    // 블랙홀 먼저 체크
+    const bhHits = raycaster.intersectObject(bhCoreMesh);
+    if(bhHits.length>0) { enterBlackHole(); isDrag=false; isPinching=false; return; }
     const hits=raycaster.intersectObjects(planetMeshes);
     if(hits.length>0) {
       zoomIn(hits[0].object.parent);
     } else {
-      // 빈 공간 탭 → UI 토글
       handleEmptySpaceClick(tx, ty);
     }
   }
@@ -1419,21 +1576,28 @@ function zoomOut() {
   uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
 }
 
-document.getElementById('pi-back').addEventListener('click', zoomOut);
-window.addEventListener('keydown', e => { if(e.key==='Escape') zoomOut(); });
-// PC 더블클릭으로 줌아웃 (모바일은 touchend에서 처리)
-renderer.domElement.addEventListener('dblclick', () => { if(zoomState==='landed') zoomOut(); });
+document.getElementById('pi-back').addEventListener('click', ()=>{ zoomOut(); exitBlackHole(); });
+window.addEventListener('keydown', e => {
+  if(e.key==='Escape') { zoomOut(); exitBlackHole(); }
+});
+renderer.domElement.addEventListener('dblclick', ()=>{
+  if(zoomState==='landed') zoomOut();
+  if(zoomState==='bh-landed') exitBlackHole();
+});
 
-// PC 마우스 클릭으로 행성 선택 or 빈공간 UI 토글 (모바일 탭은 touchend에서 처리)
+// PC 마우스 클릭으로 행성/블랙홀 선택 or 빈공간 UI 토글
 renderer.domElement.addEventListener('click', e => {
   if(e.pointerType==='touch') return;
   if(Math.abs(e.clientX-prevM.x)>5||zoomState!=='idle') return;
   raycaster.setFromCamera(mouse, camera);
+  // 블랙홀 먼저 체크
+  const bhHits = raycaster.intersectObject(bhCoreMesh);
+  if(bhHits.length>0) { enterBlackHole(); return; }
+  // 행성 체크
   const hits=raycaster.intersectObjects(planetMeshes);
   if(hits.length>0) {
     zoomIn(hits[0].object.parent);
   } else {
-    // 빈 공간 클릭 → UI 토글
     handleEmptySpaceClick(e.clientX, e.clientY);
   }
 });
@@ -1589,12 +1753,68 @@ function animate(){
     }
   }
 
-  // 블랙홀
+  // 블랙홀 회전 (index: [0]=클릭영역, [1]=코어, [2~6]=링, [7]=파티클)
   bh.rotation.y+=.00035;
-  bh.children.forEach((c,i)=>{ if(i>1) c.rotation.z+=.00012*(i+1); });
+  bh.children.forEach((c,i)=>{ if(i>2) c.rotation.z+=.00012*(i+1); });
 
   // 슈팅스타
   shooters.forEach(s=>s.update(dt));
+
+  // ── 블랙홀 줌인 애니메이션 ───────────────────────────────
+  if(zoomState==='bh-zooming-in'){
+    bhZoomProgress = clamp(bhZoomProgress + dt*.45, 0, 1);
+    // easeInCubic: 점점 가속하며 빨려들어가는 느낌
+    const e = bhZoomProgress*bhZoomProgress*bhZoomProgress;
+    // 카메라 원점(블랙홀)으로 당겨짐, 최종 거리 18
+    const targetPos = new THREE.Vector3(0,0,18);
+    camera.position.lerpVectors(bhCamStart, targetPos, e);
+    camera.lookAt(0,0,0);
+    // FOV 확장: 58 → 80 (빨려들어가는 시각 효과)
+    camera.fov = lerp(58, 80, e);
+    camera.updateProjectionMatrix();
+    // 블랙홀 링 펄스 (빠르게)
+    bh.children.forEach((c,i)=>{
+      if(i>=2&&i<=6&&c.material) c.material.opacity = Math.min(1, (.68-i*.09)*(1+e*1.5));
+    });
+    if(bhZoomProgress>=1) landOnBlackHole();
+  }
+  // ── 블랙홀 착륙 상태 ─────────────────────────────────────
+  else if(zoomState==='bh-landed'){
+    // 카메라가 블랙홀 주위를 아주 천천히 공전
+    const angle = t*.06;
+    camera.position.x = Math.sin(angle)*18;
+    camera.position.y = Math.sin(t*.04)*4;
+    camera.position.z = Math.cos(angle)*18;
+    camera.lookAt(0,0,0);
+  }
+  // ── 블랙홀 탈출 애니메이션 ───────────────────────────────
+  else if(zoomState==='bh-zooming-out'){
+    bhZoomProgress = clamp(bhZoomProgress + dt*.4, 0, 1);
+    const e = 1 - Math.pow(1-bhZoomProgress, 3); // easeOutCubic
+    const r = camDist + Math.sin(t*.11)*2.2;
+    const targetPos = new THREE.Vector3(
+      r*Math.sin(sph.ph)*Math.sin(sph.th),
+      r*Math.cos(sph.ph),
+      r*Math.sin(sph.ph)*Math.cos(sph.th)
+    );
+    camera.position.lerpVectors(bhCamStart, targetPos, e);
+    camera.lookAt(new THREE.Vector3(0,0,0));
+    camera.fov = lerp(80, 58, e);
+    camera.updateProjectionMatrix();
+    // 링 opacity 정상화
+    bh.children.forEach((c,i)=>{
+      if(i>=2&&i<=6&&c.material) c.material.opacity = lerp(1, .68-i*.09, e);
+    });
+    if(bhZoomProgress>=1){
+      zoomState='idle';
+      camera.fov=58; camera.updateProjectionMatrix();
+      document.getElementById('hero').classList.remove('out');
+      document.getElementById('hint').classList.remove('out');
+      document.getElementById('letterbox-t').classList.remove('on');
+      document.getElementById('letterbox-b').classList.remove('on');
+      autoRot=true;
+    }
+  }
 
   // 줌 애니메이션
   if(zoomState==='zooming-in'){
@@ -1628,6 +1848,21 @@ function animate(){
 
     // 호버
     raycaster.setFromCamera(mouse,camera);
+    // 블랙홀 호버 체크
+    const bhHover = raycaster.intersectObject(bhCoreMesh);
+    if(bhHover.length>0) {
+      document.body.style.cursor='pointer';
+      document.getElementById('tt-name').textContent='블랙홀';
+      document.getElementById('tt-mood').textContent='Cosmic Mix · 클릭해서 탐험';
+      const sv=new THREE.Vector3(0,0,0).project(camera);
+      const sx=(sv.x*.5+.5)*W(), sy=(-sv.y*.5+.5)*H();
+      tooltip.style.cssText=`opacity:1;left:${sx+18}px;top:${sy-72}px;position:absolute`;
+      if(hovered){
+        if(hovered.children[3]?.material) hovered.children[3].material.opacity=.065;
+        if(hovered.children[4]?.material) hovered.children[4].material.opacity=.022;
+        hovered=null;
+      }
+    } else {
     const hits=raycaster.intersectObjects(planetMeshes);
     if(hits.length>0){
       const g=hits[0].object.parent;
@@ -1649,6 +1884,7 @@ function animate(){
       document.body.style.cursor='default';
       tooltip.style.opacity='0';
     }
+    } // end bhHover else
   } else if(zoomState==='landed'){
     const d=zoomTarget.userData, pp=zoomTarget.position, angle=t*.18, orbitR=d.r*4;
     camera.position.x=pp.x+Math.sin(angle)*orbitR;
