@@ -118,8 +118,10 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
 #tooltip .tt-hint{font-size:10px;color:rgba(123,112,224,.4)}
 
 /* PLAYER */
-#player{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:20px;padding:14px 40px;background:linear-gradient(to top,rgba(1,0,6,.98) 0%,rgba(1,0,6,.6) 70%,transparent 100%);pointer-events:auto;transition:opacity .5s,transform .5s;z-index:100}
+#player{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:20px;padding:14px 40px;background:linear-gradient(to top,rgba(1,0,6,.98) 0%,rgba(1,0,6,.6) 70%,transparent 100%);pointer-events:none;transition:opacity .5s,transform .5s;z-index:100}
 #player.out{opacity:0;transform:translateY(10px);pointer-events:none}
+/* 플레이어 내부 컨트롤만 클릭 가능 — 배경 그라디언트는 클릭 통과 */
+#player .p-now,#player .p-ctrl,#player .p-play,#player .p-mode,#player #prog,#player .p-plat,#player .p-disc{pointer-events:auto;cursor:pointer}
 .p-now{display:flex;align-items:center;gap:12px;min-width:0;flex:0 0 auto}
 .p-disc{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(155,145,255,.28);animation:spin 8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
