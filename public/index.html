@@ -1291,8 +1291,26 @@ class InputManager {
   _pd(t){const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
   _bind(){
     const c=this.canvas, S=StellaraState.inp, C=StellaraState.cam;
-    c.addEventListener('mousedown',e=>{
-      onUserActivity();if(zoomState!=='idle')return;
+    // mousedown을 window 전체로 — UI 인터랙션 요소 클릭 시 드래그 무시
+    const _NO_DRAG_TAGS = new Set(['INPUT','BUTTON','TEXTAREA','SELECT','A']);
+    const _NO_DRAG_CLASS = ['chip','p-now','p-ctrl','p-play','p-mode','p-plat',
+      'pi-track','pi-back','login-btn','logout-btn','beta-btn','mood-send','p-disc'];
+    function _isDragTarget(el) {
+      if (!el) return true;
+      if (_NO_DRAG_TAGS.has(el.tagName)) return false;
+      for (const cls of _NO_DRAG_CLASS) {
+        if (el.classList && el.classList.contains(cls)) return false;
+      }
+      // id 체크
+      const noIds = ['mood-send','login-btn','logout-btn','pi-back','prog','p-play-btn'];
+      if (el.id && noIds.includes(el.id)) return false;
+      return true;
+    }
+    window.addEventListener('mousedown',e=>{
+      onUserActivity();
+      if(zoomState!=='idle') return;
+      // UI 클릭 요소면 드래그 무시
+      if (!_isDragTarget(e.target) || !_isDragTarget(e.target.parentElement)) return;
       S.isDrag=true;C.autoRot=false;S.prevM={x:e.clientX,y:e.clientY};clearTimeout(C.autoTimer);
     });
     window.addEventListener('mousemove',e=>{
