@@ -1053,8 +1053,43 @@ function createPlanetGroup(d, idx) {
   );
   g.add(glow2);
 
+  // Cosmic Aura: 재생 중에만 빛나는 주변 파티클 (최대 30개)
+  // 평소에는 opacity=0, 재생 시 animate 루프에서 서서히 등장
+  (function() {
+    const auraGeo = new THREE.BufferGeometry();
+    const auraCount = 28;
+    const auraPos = new Float32Array(auraCount * 3);
+    const spread = d.r * 2.2;
+    for(let i = 0; i < auraCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      const r     = spread * (0.85 + Math.random() * 0.3);
+      auraPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+      auraPos[i*3+1] = r * Math.cos(phi);
+      auraPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    auraGeo.setAttribute('position', new THREE.BufferAttribute(auraPos, 3));
+    const auraMat = new THREE.PointsMaterial({
+      color: d.color,
+      size: 1.2,
+      map: starTex,
+      alphaTest: 0.01,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0,           // 초기 숨김 — animate에서 제어
+      depthWrite: false,
+    });
+    const auraPoints = new THREE.Points(auraGeo, auraMat);
+    g.add(auraPoints);
+    // userData에 참조 저장 (animate에서 접근)
+    g.userData._aura = auraPoints;
+  })();
+
   g.position.set(d.x, d.y, d.z);
+  // _aura는 IIFE 내부에서 설정했으므로 spread 이후 복원
+  const savedAura = g.userData._aura;
   g.userData = { ...d, baseX:d.x, baseY:d.y, baseZ:d.z, t0:Math.random()*100, idx };
+  g.userData._aura = savedAura;
   scene.add(g); planetGroups.push(g);
 }
 
@@ -1176,34 +1211,25 @@ function enterBlackHole() {
 function landOnBlackHole() {
   zoomState = 'bh-landed';
 
-  // Cosmic Mix: 모든 YouTube 트랙을 모아서 랜덤 섞기
-  const allTracks = [];
-  planetGroups.forEach(g => {
-    if(g.userData.isYt && window._allYtItems) return; // 플레이리스트 ID 있는 행성
-    // currentTrackList 재사용 못 하므로 userData에서 수집
-  });
-
   // 우연의 미학: 5초간 곡 정보 숨김
   bhInfoHidden = true;
-  showCosmicMixUI(true); // 정보 숨김 상태로 UI 표시
+  showCosmicMixUI(true);
 
-  // YouTube 전체 트랙 수집 후 랜덤 재생
+  // Cosmic Mix: YouTube 플레이리스트에서 트랙 수집 후 랜덤 재생
   loadCosmicMixTracks().then(tracks => {
     if(tracks.length === 0) {
       showToast('플레이리스트를 먼저 연결해주세요');
       exitBlackHole(); return;
     }
-    // 랜덤 셔플
     const shuffled = [...tracks].sort(() => Math.random() - 0.5);
     currentTrackList = shuffled;
     currentTrackIndex = 0;
     currentPlaylistId = '__cosmic_mix__';
 
-    // 음악 먼저 재생
     playTrackByIndex(0);
     updatePlayerUI('Cosmic Mix', '#9B91FF', 'rgba(155,145,255,.6)');
 
-    // 5초 후 곡 정보 표시
+    // 5초 후 곡 정보 공개
     bhInfoTimer = setTimeout(() => {
       bhInfoHidden = false;
       showCosmicMixUI(false);
@@ -1728,28 +1754,46 @@ function animate(){
 
   // ── 재생 이펙트 ───────────────────────────────────────────
   if (activePlanetGroup && zoomState === 'landed') {
-    // 자식 인덱스: 0=mesh, 1=ring1, 2=ring2, 3=ring3(apple only), 4or3=glow1, 5or4=glow2
     const ch = activePlanetGroup.children;
     const isApple = activePlanetGroup.userData.platform === 'apple';
-    const gi1 = isApple ? 4 : 3;  // 내부 글로우 인덱스
-    const gi2 = isApple ? 5 : 4;  // 외부 글로우 인덱스
+    const gi1 = isApple ? 4 : 3;
+    const gi2 = isApple ? 5 : 4;
 
-    // 외부 글로우 펄스 (강하게)
+    // 외부 글로우 펄스
     if (ch[gi2]?.material) {
-      ch[gi2].material.opacity = 0.04 + Math.abs(Math.sin(t * 1.8)) * 0.12 + Math.sin(t * 5.5) * 0.02;
+      ch[gi2].material.opacity = 0.04 + Math.abs(Math.sin(t * 1.8)) * 0.12;
     }
     // 내부 글로우 펄스
     if (ch[gi1]?.material) {
       ch[gi1].material.opacity = 0.08 + Math.abs(Math.sin(t * 2.2)) * 0.1;
     }
-    // 메인 링 투명도 펄스
+    // 메인 링 펄스
     if (ch[1]?.material) {
       ch[1].material.opacity = 0.42 + Math.sin(t * 3.0) * 0.18;
     }
-    // 행성 자체 약간 scale 펄스
+    // Breathing Planet: 4초 주기, 1.0 ~ 1.02 (π/2 = 약 1.57 → 2π/4초)
     if (ch[0]) {
-      const pulse = 1 + Math.sin(t * 2.4) * 0.012;
-      ch[0].scale.setScalar(pulse);
+      const breath = 1.0 + Math.sin(t * (Math.PI / 2)) * 0.01;
+      ch[0].scale.setScalar(breath);
+    }
+
+    // Cosmic Aura: 파티클 opacity 재생 시 증가
+    if (activePlanetGroup.userData._aura) {
+      const aura = activePlanetGroup.userData._aura;
+      const targetOp = isPlaying ? 0.55 : 0.0;
+      aura.material.opacity += (targetOp - aura.material.opacity) * 0.03;
+      // 파티클 천천히 회전
+      aura.rotation.y += 0.0012;
+      aura.rotation.x += 0.0006;
+    }
+  } else if (activePlanetGroup) {
+    // 착륙 해제 시 행성 scale 원복 + Aura 페이드아웃
+    if (activePlanetGroup.children[0]) {
+      activePlanetGroup.children[0].scale.setScalar(1.0);
+    }
+    if (activePlanetGroup.userData._aura) {
+      const aura = activePlanetGroup.userData._aura;
+      aura.material.opacity += (0 - aura.material.opacity) * 0.05;
     }
   }
 
