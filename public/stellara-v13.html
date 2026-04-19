@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Stellara — 우주 음악 탐험</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#010006;overflow:hidden;font-family:'Apple SD Gothic Neo','Pretendard',system-ui,sans-serif}
-canvas{display:block;position:fixed;inset:0;z-index:1}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#010006;overflow:hidden;font-family:'Apple SD Gothic Neo','Pretendard',system-ui,sans-serif;touch-action:none}
+canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
 #ui{position:fixed;inset:0;pointer-events:none;z-index:20}
 
 /* NAV */
@@ -1110,16 +1110,118 @@ let camStartLook=new THREE.Vector3(), camEndLook=new THREE.Vector3();
 
 const startAuto=()=>{clearTimeout(autoTimer);autoTimer=setTimeout(()=>{autoRot=true;},3500);};
 
-renderer.domElement.addEventListener('mousedown',e=>{if(zoomState!=='idle')return;isDrag=true;autoRot=false;prevM={x:e.clientX,y:e.clientY};clearTimeout(autoTimer);});
+// ── 마우스 이벤트 (PC) ────────────────────────────────────
+renderer.domElement.addEventListener('mousedown',e=>{
+  if(zoomState!=='idle')return;
+  isDrag=true; autoRot=false;
+  prevM={x:e.clientX,y:e.clientY};
+  clearTimeout(autoTimer);
+});
 window.addEventListener('mousemove',e=>{
   mouse.x=(e.clientX/W())*2-1; mouse.y=-(e.clientY/H())*2+1;
   if(!isDrag||zoomState!=='idle')return;
-  const dx=e.clientX-prevM.x,dy=e.clientY-prevM.y;
+  const dx=e.clientX-prevM.x, dy=e.clientY-prevM.y;
   tSph.th-=dx*.004; tSph.ph=clamp(tSph.ph+dy*.004,.15,Math.PI-.15);
   prevM={x:e.clientX,y:e.clientY};
 });
 window.addEventListener('mouseup',()=>{isDrag=false;startAuto();});
-renderer.domElement.addEventListener('wheel',e=>{if(zoomState!=='idle')return;tCamDist=clamp(tCamDist+e.deltaY*.12,50,220);autoRot=false;startAuto();},{passive:true});
+renderer.domElement.addEventListener('wheel',e=>{
+  if(zoomState!=='idle')return;
+  tCamDist=clamp(tCamDist+e.deltaY*.12,50,220);
+  autoRot=false; startAuto();
+},{passive:true});
+
+// ── 터치 이벤트 (모바일) ─────────────────────────────────
+// 터치 상태 변수
+let touchStartPos = {x:0,y:0};   // 터치 시작 위치 (탭/드래그 판별용)
+let touchMoved = false;           // 드래그 여부
+let pinchStartDist = 0;           // 핀치 시작 거리
+let isPinching = false;           // 핀치 중 여부
+
+// 두 손가락 사이 거리 계산
+function getPinchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+renderer.domElement.addEventListener('touchstart', e => {
+  // UI 영역(pointer-events:auto) 터치는 무시 — 자연스럽게 버블링
+  if(e.target !== renderer.domElement) return;
+  e.preventDefault();
+
+  if(e.touches.length === 1) {
+    // 1손가락: 회전 준비
+    isPinching = false;
+    touchMoved = false;
+    touchStartPos = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+    prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+    if(zoomState==='idle'){isDrag=true; autoRot=false; clearTimeout(autoTimer);}
+  } else if(e.touches.length === 2) {
+    // 2손가락: 핀치 준비
+    isDrag = false;
+    isPinching = true;
+    pinchStartDist = getPinchDist(e.touches);
+    autoRot=false; clearTimeout(autoTimer);
+  }
+},{passive:false});
+
+renderer.domElement.addEventListener('touchmove', e => {
+  if(e.target !== renderer.domElement) return;
+  e.preventDefault();
+
+  if(e.touches.length === 1 && isDrag && zoomState==='idle') {
+    // 1손가락: 우주 회전
+    const dx = e.touches[0].clientX - prevM.x;
+    const dy = e.touches[0].clientY - prevM.y;
+    // 5px 이상 이동 시 드래그로 판별
+    if(Math.abs(e.touches[0].clientX-touchStartPos.x)>5 ||
+       Math.abs(e.touches[0].clientY-touchStartPos.y)>5) touchMoved=true;
+    tSph.th -= dx*.005;
+    tSph.ph = clamp(tSph.ph+dy*.005, .15, Math.PI-.15);
+    prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+
+    // 호버용 마우스 좌표 업데이트
+    mouse.x=(e.touches[0].clientX/W())*2-1;
+    mouse.y=-(e.touches[0].clientY/H())*2+1;
+
+  } else if(e.touches.length === 2 && isPinching) {
+    // 2손가락: 핀치 줌
+    const dist = getPinchDist(e.touches);
+    const delta = pinchStartDist - dist;      // 양수 = 줌아웃, 음수 = 줌인
+    tCamDist = clamp(tCamDist + delta*.25, 50, 220);
+    pinchStartDist = dist;                    // 매 프레임 갱신 (부드러운 줌)
+  }
+},{passive:false});
+
+renderer.domElement.addEventListener('touchend', e => {
+  if(e.target !== renderer.domElement) return;
+
+  // 행성 착륙 상태: 더블탭으로 줌아웃
+  if(zoomState==='landed') {
+    if(!touchMoved) {
+      const now=Date.now();
+      if(now-lastTouchTime<350) zoomOut();
+      lastTouchTime=now;
+    }
+    isDrag=false; isPinching=false; startAuto();
+    return;
+  }
+
+  // idle 상태: 탭으로 행성 클릭
+  if(!touchMoved && zoomState==='idle' && e.changedTouches.length===1) {
+    const tx=e.changedTouches[0].clientX;
+    const ty=e.changedTouches[0].clientY;
+    mouse.x=(tx/W())*2-1;
+    mouse.y=-(ty/H())*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObjects(planetMeshes);
+    if(hits.length>0) zoomIn(hits[0].object.parent);
+  }
+
+  isDrag=false; isPinching=false;
+  if(e.touches.length===0) startAuto();
+},{passive:true});
 
 // ── ZOOM ────────────────────────────────────────────────────
 function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
@@ -1239,15 +1341,21 @@ function zoomOut() {
 
 document.getElementById('pi-back').addEventListener('click', zoomOut);
 window.addEventListener('keydown', e => { if(e.key==='Escape') zoomOut(); });
+// PC 더블클릭으로 줌아웃 (모바일은 touchend에서 처리)
 renderer.domElement.addEventListener('dblclick', () => { if(zoomState==='landed') zoomOut(); });
 
-// 클릭
+// PC 마우스 클릭으로 행성 선택 (모바일 탭은 touchend에서 처리)
 renderer.domElement.addEventListener('click', e => {
+  // 터치 디바이스면 건너뜀 (touchend가 담당)
+  if(e.pointerType==='touch') return;
   if(Math.abs(e.clientX-prevM.x)>5||zoomState!=='idle') return;
   raycaster.setFromCamera(mouse, camera);
   const hits=raycaster.intersectObjects(planetMeshes);
   if(hits.length>0) zoomIn(hits[0].object.parent);
 });
+
+// 더블탭 시간 추적 (touchend에서 사용)
+let lastTouchTime = 0;
 
 // 무드칩
 document.querySelectorAll('.chip').forEach(c=>{
