@@ -1629,12 +1629,7 @@ function handleEmptySpaceClick(clientX, clientY) {
 
 const startAuto=()=>{clearTimeout(StellaraState.cam.autoTimer);StellaraState.cam.autoTimer=setTimeout(()=>{StellaraState.cam.autoRot=true;},3500);};
 
-// InputManager 인스턴스 생성
-const input = new InputManager(renderer.domElement, camera);
-// pi-back 버튼 (UI 영역)
-document.getElementById('pi-back').addEventListener('click',()=>{zoomOut();exitBlackHole();});
-
-// 마우스/터치 이벤트 → InputManager._bind()로 처리됨
+// InputManager 인스턴스는 모든 함수 정의 후 animate() 뒤에서 생성됨
 
 // ── ZOOM ────────────────────────────────────────────────────
 function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
@@ -2193,6 +2188,11 @@ function animate(){
   renderer.render(scene,camera);
 }
 animate();
+
+// ── InputManager: 모든 함수 정의 완료 후 생성 ──────────────
+// (zoomIn, zoomOut, handleEmptySpaceClick 등이 이미 정의됨)
+const input = new InputManager(renderer.domElement, camera);
+document.getElementById('pi-back').addEventListener('click',()=>{zoomOut();exitBlackHole();});
 
 // ── window 인터페이스 노출 (HTML onclick에서 호출) ──────────
 window.playTrackByIndex = playTrackByIndex;
