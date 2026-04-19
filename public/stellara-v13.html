@@ -187,6 +187,16 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
 #hint.out{opacity:0}
 @keyframes breathe{0%,100%{opacity:.28}50%{opacity:.6}}
 
+/* Task K: DJ 감성 멘트 */
+#dj-msg{
+  position:absolute;bottom:95px;left:50%;transform:translateX(-50%);
+  font-size:13px;color:rgba(196,189,255,.75);text-align:center;
+  max-width:min(480px,80vw);line-height:1.75;letter-spacing:.02em;
+  font-style:italic;pointer-events:none;
+  opacity:0;transition:opacity .8s ease;
+}
+#dj-msg.show{opacity:1}
+
 
 #loading.done{opacity:0;pointer-events:none}
 .ld-logo{font-size:22px;font-weight:300;letter-spacing:.2em;color:#C4BDFF}
@@ -333,6 +343,7 @@ canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
   </div>
 
   <div id="hint">행성을 클릭해 탐험하세요 · 드래그로 우주 회전 · 스크롤로 줌</div>
+  <div id="dj-msg"></div>
 
   <!-- 셔플 버튼 (우주 메인화면 우하단) -->
   <div id="shuffle-btn" onclick="shuffleTracks()" style="
@@ -875,12 +886,12 @@ void main(){
 // ── PLANET DATA ───────────────────────────────────────────────
 // Task E: x,y,z는 아래 generatePlanetPositions()가 동적으로 할당
 const PLANETS=[
-  {name:'새벽 감성',mood:'몽환·잔잔',hex:'#C97BF0',color:0xC97BF0,desc:'잠들지 못한 새벽, 창가의 빛처럼 조용히 곁에 있을 음악들.',r:9,spd:.00022,frag:gasFrag('.45,.18,.65','.25,.08,.45','.7,.35,.85'),tracks:[['새벽의 끝자락','3:47'],['3시의 기억','4:12'],['잠들기 전에','3:28'],['혼자인 밤에','5:01'],['안개 속에서','3:55']],discColor:'rgba(201,123,240,.6)'},
-  {name:'힐링·자연',mood:'치유·고요',hex:'#3DCAA5',color:0x3DCAA5,desc:'바람, 빗소리, 새소리로 채워진 공간.',r:10,spd:.00018,frag:gasFrag('.08,.42,.32','.15,.62,.45','.25,.75,.55'),tracks:[['숲속의 대화','4:33'],['빗물의 노래','5:14'],['초록빛 오후','3:52'],['바람소리','6:02'],['새소리 명상','4:28']],discColor:'rgba(61,202,165,.6)'},
-  {name:'집중 모드',mood:'맑은 집중',hex:'#5BA8F0',color:0x5BA8F0,desc:'방해받지 않는 소리들로 당신만의 공간을 만들어드립니다.',r:7,spd:.00048,frag:iceFrag,tracks:[['흐름 속으로','3:01'],['깊은 집중','4:45'],['Lofi Study','5:30'],['White Noise','8:00'],['Flow State','4:12']],discColor:'rgba(91,168,240,.6)'},
-  {name:'설렘',mood:'따뜻한 두근거림',hex:'#F0A060',color:0xF0A060,desc:'두근거리는 감정을 더 환하게 만들어줄 음악들.',r:8,spd:.00032,frag:gasFrag('.65,.35,.08','.8,.5,.12','.9,.65,.2'),tracks:[['첫 페이지','3:22'],['두근거림','4:01'],['설레는 봄날','3:44'],['너를 보면','4:18'],['달콤한 상상','3:55']],discColor:'rgba(240,160,96,.6)'},
-  {name:'빗소리',mood:'차분·내면',hex:'#7BB0E0',color:0x7BB0E0,desc:'창밖의 빗소리처럼 차분하게 스며드는 음악.',r:6.5,spd:.00055,frag:iceFrag,tracks:[['빗소리 위로','5:22'],['창가에서','4:04'],['조용한 오후','3:38'],['Rainy Day','6:11'],['빗속 산책','4:47']],discColor:'rgba(123,176,224,.6)'},
-  {name:'에너지',mood:'강렬·해방',hex:'#F07070',color:0xF07070,desc:'강렬하게 불태우고 싶은 감정.',r:8.5,spd:.00026,frag:lavaFrag,tracks:[['폭발 전야','3:12'],['해방감','4:02'],['달려가','3:28'],['불꽃처럼','3:55'],['가속','2:58']],discColor:'rgba(240,112,112,.6)'},
+  {name:'새벽 감성',mood:'몽환·잔잔',hex:'#C97BF0',color:0xC97BF0,desc:'잠들지 못한 새벽, 창가의 빛처럼 조용히 곁에 있을 음악들.',r:9,spd:.00022,frag:gasFrag('.45,.18,.65','.25,.08,.45','.7,.35,.85'),tracks:[['새벽의 끝자락','3:47'],['3시의 기억','4:12'],['잠들기 전에','3:28'],['혼자인 밤에','5:01'],['안개 속에서','3:55']],discColor:'rgba(201,123,240,.6)',moodTags:['새벽 감성']},
+  {name:'힐링·자연',mood:'치유·고요',hex:'#3DCAA5',color:0x3DCAA5,desc:'바람, 빗소리, 새소리로 채워진 공간.',r:10,spd:.00018,frag:gasFrag('.08,.42,.32','.15,.62,.45','.25,.75,.55'),tracks:[['숲속의 대화','4:33'],['빗물의 노래','5:14'],['초록빛 오후','3:52'],['바람소리','6:02'],['새소리 명상','4:28']],discColor:'rgba(61,202,165,.6)',moodTags:['힐링','빗소리']},
+  {name:'집중 모드',mood:'맑은 집중',hex:'#5BA8F0',color:0x5BA8F0,desc:'방해받지 않는 소리들로 당신만의 공간을 만들어드립니다.',r:7,spd:.00048,frag:iceFrag,tracks:[['흐름 속으로','3:01'],['깊은 집중','4:45'],['Lofi Study','5:30'],['White Noise','8:00'],['Flow State','4:12']],discColor:'rgba(91,168,240,.6)',moodTags:['집중']},
+  {name:'설렘',mood:'따뜻한 두근거림',hex:'#F0A060',color:0xF0A060,desc:'두근거리는 감정을 더 환하게 만들어줄 음악들.',r:8,spd:.00032,frag:gasFrag('.65,.35,.08','.8,.5,.12','.9,.65,.2'),tracks:[['첫 페이지','3:22'],['두근거림','4:01'],['설레는 봄날','3:44'],['너를 보면','4:18'],['달콤한 상상','3:55']],discColor:'rgba(240,160,96,.6)',moodTags:['설렘']},
+  {name:'빗소리',mood:'차분·내면',hex:'#7BB0E0',color:0x7BB0E0,desc:'창밖의 빗소리처럼 차분하게 스며드는 음악.',r:6.5,spd:.00055,frag:iceFrag,tracks:[['빗소리 위로','5:22'],['창가에서','4:04'],['조용한 오후','3:38'],['Rainy Day','6:11'],['빗속 산책','4:47']],discColor:'rgba(123,176,224,.6)',moodTags:['빗소리','힐링']},
+  {name:'에너지',mood:'강렬·해방',hex:'#F07070',color:0xF07070,desc:'강렬하게 불태우고 싶은 감정.',r:8.5,spd:.00026,frag:lavaFrag,tracks:[['폭발 전야','3:12'],['해방감','4:02'],['달려가','3:28'],['불꽃처럼','3:55'],['가속','2:58']],discColor:'rgba(240,112,112,.6)',moodTags:['에너지']},
 ];
 
 // ── Task E: 구형 좌표계 기반 위치 생성기 ─────────────────────
@@ -1532,6 +1543,8 @@ function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
 function zoomIn(pg) {
   if(zoomState!=='idle') return;
   zoomState='zooming-in'; zoomTarget=pg; zoomProgress=0;
+  // Task K: 줌인 시 무드 필터 해제
+  if(activeMood) clearMoodFilter();
   camStartPos.copy(camera.position);
   const pp=pg.position, dir=pp.clone().normalize();
   camEndPos.copy(pp).sub(dir.clone().multiplyScalar(pg.userData.r*3.5));
@@ -1692,9 +1705,143 @@ renderer.domElement.addEventListener('click', e => {
 // 더블탭 시간 추적 (touchend에서 사용)
 let lastTouchTime = 0;
 
+// ── Task K: 무드 성단 필터링 + DJ 감성 스크립트 ──────────
+
+// DJ 감성 멘트 — 알고리즘이 아닌 우주의 목소리
+const DJ_SCRIPTS = {
+  '새벽 감성': "새벽의 푸른 빛이 당신을 감싸는군요. 잠들지 못한 마음들이 모여 있는, 가장 고요한 궤도로 당신을 안내할게요.",
+  '힐링':      "당신의 궤도에 쌓인 성간 먼지를 씻어낼 시간입니다. 자연의 호흡이 닿는 평온한 좌표를 찾았습니다.",
+  '집중':      "심우주의 고요함 속으로 깊숙이 침잠하려 합니다. 불필요한 노이즈를 걷어내고, 당신만의 순수한 주파수를 맞춰드릴게요.",
+  '설렘':      "당신의 우주에 강렬한 신성(Nova)이 떠올랐군요. 두근거림으로 가득 찬 따뜻한 성운 속으로 궤도를 수정합니다.",
+  '빗소리':    "우주 너머로 비가 내리는 소리가 들리나요? 차분한 빗방울이 당신의 내면을 적시는, 가장 고요한 좌표입니다.",
+  '에너지':    "엔진 출력을 최대로 높일 시간입니다. 타오르는 불꽃처럼 강렬하고 자유로운 궤도로 당신을 인도할게요."
+};
+
+// 무드별 안개 색상 (우주 톤 변화)
+const MOOD_FOG = {
+  '새벽 감성': new THREE.Color(0x1A0A3A),
+  '힐링':      new THREE.Color(0x051A12),
+  '집중':      new THREE.Color(0x020A1A),
+  '설렘':      new THREE.Color(0x1A0D05),
+  '빗소리':    new THREE.Color(0x050D1A),
+  '에너지':    new THREE.Color(0x1A0505),
+  'default':   new THREE.Color(0x010006),
+};
+
+// 현재 선택된 무드
+let activeMood = null;
+// 안개 목표 색상 (animate 루프에서 lerp)
+let fogTargetColor = new THREE.Color(0x010006);
+
+// DJ 메시지 표시
+function showDJMessage(mood) {
+  const el = document.getElementById('dj-msg');
+  const msg = DJ_SCRIPTS[mood];
+  if(!el || !msg) return;
+  el.classList.remove('show');
+  el.textContent = msg;
+  // 다음 프레임에서 fade-in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => el.classList.add('show'));
+  });
+}
+
+function hideDJMessage() {
+  const el = document.getElementById('dj-msg');
+  if(el) el.classList.remove('show');
+}
+
+// 행성 dimming — 모든 자식 material의 opacity 조절
+function setPlanetDim(group, dimmed) {
+  group.children.forEach(child => {
+    if(child.material) {
+      child.material.transparent = true;
+      // 투명도 목표값을 userData에 저장 → animate에서 lerp
+      child.material._targetOpacity = dimmed ? 0.06 : (child.material._baseOpacity ?? child.material.opacity);
+    }
+  });
+}
+
+// 무드 필터 적용
+function applyMoodFilter(moodTag) {
+  if(zoomState !== 'idle') return;
+
+  // 토글: 같은 칩 재클릭 시 해제
+  if(activeMood === moodTag) {
+    clearMoodFilter();
+    return;
+  }
+
+  activeMood = moodTag;
+
+  // 칩 active 상태
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.toggle('active', c.textContent.trim() === moodTag);
+  });
+
+  // 행성 dimming + 매칭 행성 수집
+  const matched = [];
+  planetGroups.forEach(g => {
+    const tags = g.userData.moodTags || [];
+    const isMatch = tags.includes(moodTag);
+    // _baseOpacity 저장 (첫 실행 시 현재 opacity 기록)
+    g.children.forEach(child => {
+      if(child.material && child.material._baseOpacity === undefined) {
+        child.material._baseOpacity = child.material.opacity;
+      }
+    });
+    setPlanetDim(g, !isMatch);
+    if(isMatch) matched.push(g);
+  });
+
+  // 대표 행성으로 카메라 Pan (줌인 없이 방향만 전환)
+  if(matched.length > 0) {
+    const target = matched[0];
+    const pp = target.position;
+    // tSph를 목표 행성 방향으로 부드럽게 이동
+    const flatDist = Math.sqrt(pp.x*pp.x + pp.z*pp.z);
+    tSph.th = Math.atan2(pp.x, pp.z);
+    tSph.ph = Math.atan2(flatDist, pp.y) + Math.PI/2;
+    tSph.ph = Math.max(0.15, Math.min(Math.PI-0.15, tSph.ph));
+    autoRot = false;
+    clearTimeout(autoTimer);
+  }
+
+  // 안개 색상 목표 설정
+  fogTargetColor.copy(MOOD_FOG[moodTag] || MOOD_FOG['default']);
+
+  // DJ 멘트 출력
+  showDJMessage(moodTag);
+}
+
+// 무드 필터 해제
+function clearMoodFilter() {
+  activeMood = null;
+
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+
+  // 모든 행성 opacity 복원
+  planetGroups.forEach(g => {
+    g.children.forEach(child => {
+      if(child.material) {
+        child.material._targetOpacity = child.material._baseOpacity ?? child.material.opacity;
+      }
+    });
+  });
+
+  // 안개 원래 색으로
+  fogTargetColor.copy(MOOD_FOG['default']);
+
+  hideDJMessage();
+  autoRot = true;
+}
+
 // 무드칩
-document.querySelectorAll('.chip').forEach(c=>{
-  c.addEventListener('click',()=>{ if(zoomState==='idle') zoomIn(planetGroups[parseInt(c.dataset.idx)]); });
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    const moodTag = c.textContent.trim();
+    applyMoodFilter(moodTag);
+  });
 });
 document.getElementById('mood-send').addEventListener('click',()=>{ if(zoomState==='idle') zoomIn(planetGroups[Math.floor(Math.random()*Math.min(6,planetGroups.length))]); });
 document.getElementById('mood-input').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('mood-send').click(); });
@@ -1803,6 +1950,20 @@ function animate(){
 
   // 셰이더 시간
   planetMeshes.forEach(m=>{ if(m.material?.uniforms?.time) m.material.uniforms.time.value=t; });
+
+  // Task K: 무드 필터 — 행성 opacity lerp (매 프레임 부드럽게)
+  if(activeMood) {
+    planetGroups.forEach(g => {
+      g.children.forEach(child => {
+        if(child.material && child.material._targetOpacity !== undefined) {
+          child.material.opacity += (child.material._targetOpacity - child.material.opacity) * 0.06;
+        }
+      });
+    });
+  }
+
+  // Task K: 안개 색상 lerp
+  scene.fog.color.lerp(fogTargetColor, 0.025);
 
   // 행성 부유
   planetGroups.forEach((g,i)=>{
