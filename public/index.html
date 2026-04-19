@@ -680,15 +680,12 @@ ytScript.src = 'https://www.youtube.com/iframe_api';
 document.head.appendChild(ytScript);
 </script>
 
-<!-- Firebase -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider }
-  from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
-  from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-
-const app = initializeApp({
+<!-- Firebase compat (non-module, 전역 접근 가능) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script>
+const app = firebase.initializeApp({
   apiKey: "AIzaSyDrn_1y2C0-qDHVN3QwZPCptuCYzp43ZWM",
   authDomain: "stellara-be248.firebaseapp.com",
   projectId: "stellara-be248",
@@ -696,9 +693,9 @@ const app = initializeApp({
   messagingSenderId: "13620798264",
   appId: "1:13620798264:web:c262f13d2c8312a0c8d7cd"
 });
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+const auth = firebase.auth();
+const db = firebase.firestore();
+const provider = new firebase.auth.GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
 
 // 전역 함수
@@ -755,7 +752,7 @@ function setPlatformBadge(platform, hasToken = false) {
 window.connectPlatform = async () => {
   if (!selectedPlatform) { showToast('플랫폼을 선택해주세요'); return; }
   const user = auth.currentUser;
-  if (user) await setDoc(doc(db, 'users', user.uid), { platform: selectedPlatform }, { merge: true });
+  if (user) await db.collection('users').doc(user.uid).set({ platform: selectedPlatform }, { merge: true });
   const hasToken = selectedPlatform === 'youtube' ? !!window._ytToken : false;
   setPlatformBadge(selectedPlatform, hasToken);
   window.hidePlatformModal();
@@ -769,7 +766,7 @@ window.connectPlatform = async () => {
 
 window.handleGoogleLogin = async () => {
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await auth.signInWithPopup(provider);
     window.hideAuthModal();
     const cred = GoogleAuthProvider.credentialFromResult(result);
     if (cred?.accessToken) {
@@ -783,7 +780,7 @@ window.handleGoogleLogin = async () => {
 };
 
 window.handleLogout = async () => {
-  await signOut(auth);
+  await auth.signOut();
   sessionStorage.removeItem('yt_token');
   window._ytToken = null;
   window._allYtItems = null;
@@ -816,7 +813,7 @@ async function loadYtPlaylists(token) {
 }
 
 // Auth 상태 감지
-onAuthStateChanged(auth, async (user) => {
+auth.onAuthStateChanged( async (user) => {
   const loginBtn = document.getElementById('login-btn');
   const userInfo = document.getElementById('user-info');
   if (user) {
@@ -831,10 +828,10 @@ onAuthStateChanged(auth, async (user) => {
       if (savedToken) window._ytToken = savedToken;
     }
 
-    const ref = doc(db, 'users', user.uid);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL, createdAt: serverTimestamp(), platform: null });
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({ uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL, createdAt: firebase.firestore.FieldValue.serverTimestamp(), platform: null });
       setTimeout(() => document.getElementById('platform-modal').classList.add('show'), 800);
     } else {
       const d = snap.data();
@@ -2196,6 +2193,11 @@ function animate(){
   renderer.render(scene,camera);
 }
 animate();
+
+// ── window 인터페이스 노출 (HTML onclick에서 호출) ──────────
+window.playTrackByIndex = playTrackByIndex;
+window.zoomIn  = zoomIn;
+window.zoomOut = zoomOut;
 
 // 로딩
 const MSGS=['별빛을 모으는 중...','행성 궤도 계산 중...','성운을 배치하는 중...','우주가 열리고 있습니다...'];
