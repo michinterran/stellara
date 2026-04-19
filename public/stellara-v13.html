@@ -8,7 +8,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#010006;overflow:hidden;font-family:'Apple SD Gothic Neo','Pretendard',system-ui,sans-serif;touch-action:none}
 canvas{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
-#ui{position:fixed;inset:0;pointer-events:none;z-index:20}
+#ui{position:fixed;inset:0;pointer-events:none;z-index:20;transition:opacity .6s ease}
 
 /* NAV */
 #nav{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:22px 40px;background:linear-gradient(to bottom,rgba(1,0,6,.92) 0%,transparent 100%)}
@@ -862,14 +862,45 @@ void main(){
 }`;
 
 // ── PLANET DATA ───────────────────────────────────────────────
+// Task E: x,y,z는 아래 generatePlanetPositions()가 동적으로 할당
 const PLANETS=[
-  {name:'새벽 감성',mood:'몽환·잔잔',hex:'#C97BF0',color:0xC97BF0,desc:'잠들지 못한 새벽, 창가의 빛처럼 조용히 곁에 있을 음악들.',r:9,x:-120,y:38,z:-50,spd:.00022,frag:gasFrag('.45,.18,.65','.25,.08,.45','.7,.35,.85'),tracks:[['새벽의 끝자락','3:47'],['3시의 기억','4:12'],['잠들기 전에','3:28'],['혼자인 밤에','5:01'],['안개 속에서','3:55']],discColor:'rgba(201,123,240,.6)'},
-  {name:'힐링·자연',mood:'치유·고요',hex:'#3DCAA5',color:0x3DCAA5,desc:'바람, 빗소리, 새소리로 채워진 공간.',r:10,x:115,y:-28,z:-40,spd:.00018,frag:gasFrag('.08,.42,.32','.15,.62,.45','.25,.75,.55'),tracks:[['숲속의 대화','4:33'],['빗물의 노래','5:14'],['초록빛 오후','3:52'],['바람소리','6:02'],['새소리 명상','4:28']],discColor:'rgba(61,202,165,.6)'},
-  {name:'집중 모드',mood:'맑은 집중',hex:'#5BA8F0',color:0x5BA8F0,desc:'방해받지 않는 소리들로 당신만의 공간을 만들어드립니다.',r:7,x:-45,y:-110,z:-60,spd:.00048,frag:iceFrag,tracks:[['흐름 속으로','3:01'],['깊은 집중','4:45'],['Lofi Study','5:30'],['White Noise','8:00'],['Flow State','4:12']],discColor:'rgba(91,168,240,.6)'},
-  {name:'설렘',mood:'따뜻한 두근거림',hex:'#F0A060',color:0xF0A060,desc:'두근거리는 감정을 더 환하게 만들어줄 음악들.',r:8,x:100,y:72,z:-75,spd:.00032,frag:gasFrag('.65,.35,.08','.8,.5,.12','.9,.65,.2'),tracks:[['첫 페이지','3:22'],['두근거림','4:01'],['설레는 봄날','3:44'],['너를 보면','4:18'],['달콤한 상상','3:55']],discColor:'rgba(240,160,96,.6)'},
-  {name:'빗소리',mood:'차분·내면',hex:'#7BB0E0',color:0x7BB0E0,desc:'창밖의 빗소리처럼 차분하게 스며드는 음악.',r:6.5,x:-130,y:-30,z:-80,spd:.00055,frag:iceFrag,tracks:[['빗소리 위로','5:22'],['창가에서','4:04'],['조용한 오후','3:38'],['Rainy Day','6:11'],['빗속 산책','4:47']],discColor:'rgba(123,176,224,.6)'},
-  {name:'에너지',mood:'강렬·해방',hex:'#F07070',color:0xF07070,desc:'강렬하게 불태우고 싶은 감정.',r:8.5,x:55,y:115,z:-90,spd:.00026,frag:lavaFrag,tracks:[['폭발 전야','3:12'],['해방감','4:02'],['달려가','3:28'],['불꽃처럼','3:55'],['가속','2:58']],discColor:'rgba(240,112,112,.6)'},
+  {name:'새벽 감성',mood:'몽환·잔잔',hex:'#C97BF0',color:0xC97BF0,desc:'잠들지 못한 새벽, 창가의 빛처럼 조용히 곁에 있을 음악들.',r:9,spd:.00022,frag:gasFrag('.45,.18,.65','.25,.08,.45','.7,.35,.85'),tracks:[['새벽의 끝자락','3:47'],['3시의 기억','4:12'],['잠들기 전에','3:28'],['혼자인 밤에','5:01'],['안개 속에서','3:55']],discColor:'rgba(201,123,240,.6)'},
+  {name:'힐링·자연',mood:'치유·고요',hex:'#3DCAA5',color:0x3DCAA5,desc:'바람, 빗소리, 새소리로 채워진 공간.',r:10,spd:.00018,frag:gasFrag('.08,.42,.32','.15,.62,.45','.25,.75,.55'),tracks:[['숲속의 대화','4:33'],['빗물의 노래','5:14'],['초록빛 오후','3:52'],['바람소리','6:02'],['새소리 명상','4:28']],discColor:'rgba(61,202,165,.6)'},
+  {name:'집중 모드',mood:'맑은 집중',hex:'#5BA8F0',color:0x5BA8F0,desc:'방해받지 않는 소리들로 당신만의 공간을 만들어드립니다.',r:7,spd:.00048,frag:iceFrag,tracks:[['흐름 속으로','3:01'],['깊은 집중','4:45'],['Lofi Study','5:30'],['White Noise','8:00'],['Flow State','4:12']],discColor:'rgba(91,168,240,.6)'},
+  {name:'설렘',mood:'따뜻한 두근거림',hex:'#F0A060',color:0xF0A060,desc:'두근거리는 감정을 더 환하게 만들어줄 음악들.',r:8,spd:.00032,frag:gasFrag('.65,.35,.08','.8,.5,.12','.9,.65,.2'),tracks:[['첫 페이지','3:22'],['두근거림','4:01'],['설레는 봄날','3:44'],['너를 보면','4:18'],['달콤한 상상','3:55']],discColor:'rgba(240,160,96,.6)'},
+  {name:'빗소리',mood:'차분·내면',hex:'#7BB0E0',color:0x7BB0E0,desc:'창밖의 빗소리처럼 차분하게 스며드는 음악.',r:6.5,spd:.00055,frag:iceFrag,tracks:[['빗소리 위로','5:22'],['창가에서','4:04'],['조용한 오후','3:38'],['Rainy Day','6:11'],['빗속 산책','4:47']],discColor:'rgba(123,176,224,.6)'},
+  {name:'에너지',mood:'강렬·해방',hex:'#F07070',color:0xF07070,desc:'강렬하게 불태우고 싶은 감정.',r:8.5,spd:.00026,frag:lavaFrag,tracks:[['폭발 전야','3:12'],['해방감','4:02'],['달려가','3:28'],['불꽃처럼','3:55'],['가속','2:58']],discColor:'rgba(240,112,112,.6)'},
 ];
+
+// ── Task E: 구형 좌표계 기반 위치 생성기 ─────────────────────
+// 블랙홀(원점) 중심으로 행성들을 구면에 균등하게 배치
+function generateSphericalPos(occupiedList, minR=55, maxR=145, minDist=22, maxAttempts=30) {
+  for (let a = 0; a < maxAttempts; a++) {
+    const r   = minR + Math.random() * (maxR - minR);
+    const phi = Math.acos(2 * Math.random() - 1); // 균등 구면 분포
+    const th  = Math.random() * Math.PI * 2;
+    const x = r * Math.sin(phi) * Math.cos(th);
+    const y = r * Math.cos(phi);
+    const z = r * Math.sin(phi) * Math.sin(th);
+    const v = new THREE.Vector3(x, y, z);
+    if (!occupiedList.some(o => o.distanceTo(v) < minDist)) {
+      occupiedList.push(v);
+      return {x, y, z};
+    }
+  }
+  // 최대 시도 초과 → 그냥 배치
+  const r = minR + Math.random()*(maxR-minR);
+  const phi = Math.acos(2*Math.random()-1);
+  const th = Math.random()*Math.PI*2;
+  return {x:r*Math.sin(phi)*Math.cos(th), y:r*Math.cos(phi), z:r*Math.sin(phi)*Math.sin(th)};
+}
+
+// 기본 행성 6개 위치 동적 생성
+const _stellaraOccupied = [];
+PLANETS.forEach(d => {
+  const pos = generateSphericalPos(_stellaraOccupied);
+  d.x = pos.x; d.y = pos.y; d.z = pos.z;
+});
 
 // ── 플랫폼별 링 색 ───────────────────────────────────────────
 const RING_COLOR = {
@@ -1036,15 +1067,13 @@ window.addYtPlanets = function(items) {
     if (gi > -1) planetGroups.splice(gi, 1);
   });
 
-  const POS = [
-    {x:100,y:28,z:-42},{x:-88,y:52,z:-38},{x:72,y:-62,z:-58},
-    {x:-105,y:18,z:-48},{x:48,y:-88,z:-72},{x:-55,y:-68,z:-35},
-    {x:115,y:-22,z:-32},{x:-72,y:-45,z:-68},{x:58,y:78,z:-52},
-    {x:-118,y:12,z:-38},{x:82,y:-72,z:-42},{x:-62,y:92,z:-58},
-  ];
+  // ── Task E: 구형 좌표계 기반 동적 배치 ─────────────────
+  // 철학: 행성은 우주 전체에 골고루 퍼져야 한다
+  // 이미 배치된 모든 행성 위치 수집 (기본 행성 6개 포함)
+  const occupiedPositions = planetGroups.map(g => g.position.clone());
 
   items.slice(0, 12).forEach((pl, i) => {
-    const pos = POS[i % POS.length];
+    const pos = generateSphericalPos(occupiedPositions);
     const n = pl.contentDetails?.itemCount || 5;
     const r = trackCountToRadius(n);
     const col = trackCountToColor(n);
@@ -1108,16 +1137,64 @@ let zoomState='idle', zoomTarget=null, zoomProgress=0;
 let camStartPos=new THREE.Vector3(), camEndPos=new THREE.Vector3();
 let camStartLook=new THREE.Vector3(), camEndLook=new THREE.Vector3();
 
+// ── UI 토글 / 스크린세이버 ────────────────────────────────
+// 철학: 우주 몰입을 위해 UI를 완전히 지울 수 있어야 한다
+let uiVisible = true;
+let uiHideTimer = null;
+const UI_HIDE_DELAY = 10000; // 10초 비활동 시 자동 숨김
+
+function setUIVisible(visible) {
+  uiVisible = visible;
+  document.getElementById('ui').style.opacity = visible ? '1' : '0';
+}
+
+// 활동 감지 시 UI 복구 + 자동숨김 타이머 리셋
+function onUserActivity() {
+  if (!uiVisible) setUIVisible(true);
+  clearTimeout(uiHideTimer);
+  // landed 상태(행성 착륙)에서는 자동숨김 안 함
+  if (zoomState === 'idle') {
+    uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
+  }
+}
+
+// 처음 진입 시 자동숨김 타이머 시작
+uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
+
+// 빈 공간 클릭/탭 시 UI 토글
+// 행성 클릭과 구분 방법: raycaster hit 여부로 판별
+// hit 있으면 → 행성 진입 (UI 토글 안 함)
+// hit 없으면 → 빈 공간 (UI 토글)
+function handleEmptySpaceClick(clientX, clientY) {
+  if (zoomState !== 'idle') return;
+  const mx = (clientX/W())*2-1;
+  const my = -(clientY/H())*2+1;
+  const tmpMouse = new THREE.Vector2(mx, my);
+  raycaster.setFromCamera(tmpMouse, camera);
+  const hits = raycaster.intersectObjects(planetMeshes);
+  if (hits.length === 0) {
+    // 빈 공간 클릭 → UI 토글
+    setUIVisible(!uiVisible);
+    clearTimeout(uiHideTimer);
+    if (uiVisible) {
+      // 방금 켰으면 10초 후 다시 숨김
+      uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
+    }
+  }
+}
+
 const startAuto=()=>{clearTimeout(autoTimer);autoTimer=setTimeout(()=>{autoRot=true;},3500);};
 
 // ── 마우스 이벤트 (PC) ────────────────────────────────────
 renderer.domElement.addEventListener('mousedown',e=>{
+  onUserActivity();
   if(zoomState!=='idle')return;
   isDrag=true; autoRot=false;
   prevM={x:e.clientX,y:e.clientY};
   clearTimeout(autoTimer);
 });
 window.addEventListener('mousemove',e=>{
+  onUserActivity();
   mouse.x=(e.clientX/W())*2-1; mouse.y=-(e.clientY/H())*2+1;
   if(!isDrag||zoomState!=='idle')return;
   const dx=e.clientX-prevM.x, dy=e.clientY-prevM.y;
@@ -1126,6 +1203,7 @@ window.addEventListener('mousemove',e=>{
 });
 window.addEventListener('mouseup',()=>{isDrag=false;startAuto();});
 renderer.domElement.addEventListener('wheel',e=>{
+  onUserActivity();
   if(zoomState!=='idle')return;
   tCamDist=clamp(tCamDist+e.deltaY*.12,50,220);
   autoRot=false; startAuto();
@@ -1146,19 +1224,17 @@ function getPinchDist(touches) {
 }
 
 renderer.domElement.addEventListener('touchstart', e => {
-  // UI 영역(pointer-events:auto) 터치는 무시 — 자연스럽게 버블링
+  onUserActivity();
   if(e.target !== renderer.domElement) return;
   e.preventDefault();
 
   if(e.touches.length === 1) {
-    // 1손가락: 회전 준비
     isPinching = false;
     touchMoved = false;
     touchStartPos = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     if(zoomState==='idle'){isDrag=true; autoRot=false; clearTimeout(autoTimer);}
   } else if(e.touches.length === 2) {
-    // 2손가락: 핀치 준비
     isDrag = false;
     isPinching = true;
     pinchStartDist = getPinchDist(e.touches);
@@ -1167,37 +1243,32 @@ renderer.domElement.addEventListener('touchstart', e => {
 },{passive:false});
 
 renderer.domElement.addEventListener('touchmove', e => {
+  onUserActivity();
   if(e.target !== renderer.domElement) return;
   e.preventDefault();
 
   if(e.touches.length === 1 && isDrag && zoomState==='idle') {
-    // 1손가락: 우주 회전
     const dx = e.touches[0].clientX - prevM.x;
     const dy = e.touches[0].clientY - prevM.y;
-    // 5px 이상 이동 시 드래그로 판별
     if(Math.abs(e.touches[0].clientX-touchStartPos.x)>5 ||
        Math.abs(e.touches[0].clientY-touchStartPos.y)>5) touchMoved=true;
     tSph.th -= dx*.005;
     tSph.ph = clamp(tSph.ph+dy*.005, .15, Math.PI-.15);
     prevM = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-
-    // 호버용 마우스 좌표 업데이트
     mouse.x=(e.touches[0].clientX/W())*2-1;
     mouse.y=-(e.touches[0].clientY/H())*2+1;
-
   } else if(e.touches.length === 2 && isPinching) {
-    // 2손가락: 핀치 줌
     const dist = getPinchDist(e.touches);
-    const delta = pinchStartDist - dist;      // 양수 = 줌아웃, 음수 = 줌인
+    const delta = pinchStartDist - dist;
     tCamDist = clamp(tCamDist + delta*.25, 50, 220);
-    pinchStartDist = dist;                    // 매 프레임 갱신 (부드러운 줌)
+    pinchStartDist = dist;
   }
 },{passive:false});
 
 renderer.domElement.addEventListener('touchend', e => {
+  onUserActivity();
   if(e.target !== renderer.domElement) return;
 
-  // 행성 착륙 상태: 더블탭으로 줌아웃
   if(zoomState==='landed') {
     if(!touchMoved) {
       const now=Date.now();
@@ -1208,7 +1279,6 @@ renderer.domElement.addEventListener('touchend', e => {
     return;
   }
 
-  // idle 상태: 탭으로 행성 클릭
   if(!touchMoved && zoomState==='idle' && e.changedTouches.length===1) {
     const tx=e.changedTouches[0].clientX;
     const ty=e.changedTouches[0].clientY;
@@ -1216,7 +1286,12 @@ renderer.domElement.addEventListener('touchend', e => {
     mouse.y=-(ty/H())*2+1;
     raycaster.setFromCamera(mouse,camera);
     const hits=raycaster.intersectObjects(planetMeshes);
-    if(hits.length>0) zoomIn(hits[0].object.parent);
+    if(hits.length>0) {
+      zoomIn(hits[0].object.parent);
+    } else {
+      // 빈 공간 탭 → UI 토글
+      handleEmptySpaceClick(tx, ty);
+    }
   }
 
   isDrag=false; isPinching=false;
@@ -1233,6 +1308,9 @@ function zoomIn(pg) {
   const pp=pg.position, dir=pp.clone().normalize();
   camEndPos.copy(pp).sub(dir.clone().multiplyScalar(pg.userData.r*3.5));
   camEndLook.copy(pp);
+  // 행성 진입 시: UI 복구 + 자동숨김 타이머 중단 (행성 안에서는 UI 필요)
+  setUIVisible(true);
+  clearTimeout(uiHideTimer);
   document.getElementById('hero').classList.add('out');
   document.getElementById('player').classList.add('out');
   document.getElementById('hint').classList.add('out');
@@ -1337,6 +1415,9 @@ function zoomOut() {
   document.getElementById('letterbox-t').classList.add('on');
   document.getElementById('letterbox-b').classList.add('on');
   document.getElementById('esc-hint').classList.remove('show');
+  // 우주로 돌아오면 자동숨김 타이머 재시작
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => setUIVisible(false), UI_HIDE_DELAY);
 }
 
 document.getElementById('pi-back').addEventListener('click', zoomOut);
@@ -1344,14 +1425,18 @@ window.addEventListener('keydown', e => { if(e.key==='Escape') zoomOut(); });
 // PC 더블클릭으로 줌아웃 (모바일은 touchend에서 처리)
 renderer.domElement.addEventListener('dblclick', () => { if(zoomState==='landed') zoomOut(); });
 
-// PC 마우스 클릭으로 행성 선택 (모바일 탭은 touchend에서 처리)
+// PC 마우스 클릭으로 행성 선택 or 빈공간 UI 토글 (모바일 탭은 touchend에서 처리)
 renderer.domElement.addEventListener('click', e => {
-  // 터치 디바이스면 건너뜀 (touchend가 담당)
   if(e.pointerType==='touch') return;
   if(Math.abs(e.clientX-prevM.x)>5||zoomState!=='idle') return;
   raycaster.setFromCamera(mouse, camera);
   const hits=raycaster.intersectObjects(planetMeshes);
-  if(hits.length>0) zoomIn(hits[0].object.parent);
+  if(hits.length>0) {
+    zoomIn(hits[0].object.parent);
+  } else {
+    // 빈 공간 클릭 → UI 토글
+    handleEmptySpaceClick(e.clientX, e.clientY);
+  }
 });
 
 // 더블탭 시간 추적 (touchend에서 사용)
