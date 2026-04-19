@@ -1,1 +1,1 @@
-{"version":2,"routes":[{"src":"/(.*)\.html","dest":"/public/$1.html"},{"src":"/","dest":"/public/stellara-v12.html"}]}
+{"version":2,"outputDirectory":"public"}
