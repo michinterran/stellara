@@ -1,0 +1,117 @@
+{
+  "admin_users": {
+    "replace-with-real-firebase-uid": {
+      "uid": "replace-with-real-firebase-uid",
+      "email": "benjamin@meta.camp",
+      "displayName": "Benjamin",
+      "role": "super_admin",
+      "status": "active",
+      "scopes": [
+        "overview",
+        "galaxy_ops",
+        "admins",
+        "notices",
+        "content",
+        "settings",
+        "audit",
+        "errors",
+        "finance",
+        "api_usage"
+      ],
+      "approvedBy": "bootstrap",
+      "approvedAt": "serverTimestamp()",
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "admin_settings": {
+    "global": {
+      "maintenanceMode": false,
+      "popupEnabled": true,
+      "supportEmail": "support@stellara.app",
+      "youtubeApiStatus": "unknown",
+      "apiNotes": "YouTube status is auto-derived from usage and unresolved errors unless paused manually.",
+      "universeEditLock": false,
+      "limits": {
+        "freePlanetMax": 3,
+        "plusPlanetMax": 30,
+        "freeStarsPerPlanet": 10,
+        "plusStarsPerPlanet": 30
+      },
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "admin_documents": {
+    "privacy-policy": {
+      "id": "privacy-policy",
+      "kind": "privacy",
+      "title": "개인정보처리방침",
+      "titleEn": "Privacy Policy",
+      "body": "초기 개인정보처리방침 내용을 여기에 넣습니다.",
+      "bodyEn": "Put the initial privacy policy copy here.",
+      "status": "draft",
+      "version": "1.0.0",
+      "startsAt": null,
+      "endsAt": null,
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "payments": {
+    "manual-2026-04-24-001": {
+      "id": "manual-2026-04-24-001",
+      "provider": "manual",
+      "userId": "sample-user",
+      "userEmail": "listener@example.com",
+      "amount": 1200,
+      "currency": "USD",
+      "status": "paid",
+      "productType": "brand_orbit",
+      "promotionType": "brand",
+      "paidAt": "2026-04-24T10:00:00.000Z",
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "api_usage_daily": {
+    "youtube-2026-04-24": {
+      "id": "youtube-2026-04-24",
+      "label": "youtube",
+      "date": "2026-04-24",
+      "requests": 120,
+      "errors": 0,
+      "remainingQuota": 8200,
+      "warningThreshold": 1000,
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "admin_error_logs": {
+    "frontend-sample-001": {
+      "id": "frontend-sample-001",
+      "title": "Sample runtime warning",
+      "message": "This is a seed log to verify the Error Center UI.",
+      "level": "warning",
+      "context": "bootstrap",
+      "stack": "",
+      "resolved": false,
+      "createdAt": "serverTimestamp()",
+      "updatedAt": "serverTimestamp()"
+    }
+  },
+  "admin_notices": {
+    "rolling-signal-sample": {
+      "id": "rolling-signal-sample",
+      "placement": "rolling_signal",
+      "tone": "campaign",
+      "status": "active",
+      "title": "공식 항로 열림",
+      "titleEn": "Official route now open",
+      "body": "새로운 프로모션 신호가 감지되었습니다.",
+      "bodyEn": "A new promotional signal has been detected in orbit.",
+      "ctaLabel": "워프하기",
+      "ctaLabelEn": "Warp now",
+      "targetGalaxyId": "replace-with-featured-galaxy-id",
+      "targetGalaxySlug": "",
+      "startsAt": null,
+      "endsAt": null,
+      "updatedAt": "serverTimestamp()"
+    }
+  }
+}
