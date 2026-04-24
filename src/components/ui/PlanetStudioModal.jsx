@@ -255,18 +255,28 @@ export function PlanetStudioModal({
           boxShadow: '0 40px 140px rgba(0,0,0,.52)',
         }}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            ...closeButtonStyle(),
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            zIndex: 4,
+          }}
+        >
+          <span style={{ fontSize: 13, color: 'rgba(224,219,255,.78)' }}>✕</span>
+          {copy.close}
+        </button>
         <div style={{ display: 'grid', gridTemplateColumns: '1.08fr .92fr', height: '100%' }}>
           <section style={{ padding: '26px 24px 28px', overflowY: 'auto', background: 'linear-gradient(180deg, rgba(10,6,18,.92), rgba(6,4,14,.96))' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ paddingRight: 92 }}>
               <div>
                 <div style={{ fontSize: 10, color: 'rgba(214,206,255,.76)', letterSpacing: '.22em', textTransform: 'uppercase' }}>{copy.kicker}</div>
                 <div style={{ fontSize: 30, fontWeight: 300, color: '#FBF8FF', letterSpacing: '-.03em', marginTop: 8 }}>{copy.title}</div>
                 <div style={{ fontSize: 13, color: 'rgba(236,231,255,.82)', lineHeight: 1.8, marginTop: 10, maxWidth: 680 }}>{copy.description}</div>
               </div>
-              <button type="button" onClick={onClose} style={closeButtonStyle()}>
-                <span style={{ fontSize: 13, color: 'rgba(255,224,196,.78)' }}>✕</span>
-                {copy.close}
-              </button>
             </div>
 
             <div style={{ ...panelStyle(), padding: 18, marginTop: 20 }}>
@@ -652,11 +662,10 @@ function closeButtonStyle() {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    alignSelf: 'flex-start',
     padding: '10px 14px',
     borderRadius: 999,
-    border: '1px solid rgba(123,112,224,.18)',
-    background: 'rgba(10,8,28,.86)',
+    border: '1px solid rgba(123,112,224,.2)',
+    background: 'rgba(10,8,28,.94)',
     color: '#FBF8FF',
     fontSize: 12,
     fontFamily: 'inherit',
@@ -672,16 +681,16 @@ function ghostButtonStyle(disabled = false, active = false, textOnly = false) {
     border: textOnly
       ? '1px solid rgba(123,112,224,.1)'
       : active
-        ? '1px solid rgba(244,151,44,.28)'
+        ? '1px solid rgba(155,145,255,.34)'
         : '1px solid rgba(123,112,224,.16)',
     background: disabled
       ? 'rgba(20,16,40,.42)'
       : textOnly
         ? 'rgba(8,6,24,.46)'
         : active
-          ? 'rgba(34,18,8,.86)'
+          ? 'rgba(30,22,70,.92)'
           : 'rgba(8,6,24,.82)',
-    color: disabled ? 'rgba(220,214,255,.4)' : active ? '#FFD9A3' : '#FBF8FF',
+    color: disabled ? 'rgba(220,214,255,.4)' : active ? '#F0EEFF' : '#FBF8FF',
     fontSize: 12,
     fontFamily: 'inherit',
     cursor: disabled ? 'not-allowed' : 'pointer',

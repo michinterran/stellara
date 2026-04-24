@@ -213,6 +213,8 @@ const _core = {
 
 const PLANET_LAYOUT_VERSION = 2;
 const ORIGIN = new THREE.Vector3(0, 0, 0);
+const OVERVIEW_DIST = 228;
+const OVERVIEW_PH = Math.PI / 2 - 0.28;
 function hashString(input = '') {
   let hash = 0;
   for (let index = 0; index < input.length; index += 1) {
@@ -722,9 +724,9 @@ function zoomOutInternal() {
     sm.state='zooming-out'; sm.progress=0;
     sm.startPos.copy(_core.camera.position);
     sm.startLook.copy(sm.target?.position ?? ORIGIN);
-    const dist = 176;
+    const dist = Math.max(sm.returnDist || _core.tDist || _core.dist || 130, OVERVIEW_DIST);
     const th = _core.tSph.th ?? 0;
-    const ph = Math.PI / 2 - 0.18;
+    const ph = OVERVIEW_PH;
     sm.endPos.copy(getOrbitPoint(th, ph, dist, _core.clock.getElapsedTime()));
     sm.endLook.set(0,0,0);
     sm.returnDist = dist;
@@ -1073,8 +1075,8 @@ function initEngine(container) {
             sm.state='landed'; 
           } else { 
             const returnTh = sm.returnSph?.th ?? 0;
-            const returnPh = sm.returnSph?.ph ?? (Math.PI / 2 - 0.08);
-            const returnDist = sm.returnDist || 130;
+            const returnPh = sm.returnSph?.ph ?? OVERVIEW_PH;
+            const returnDist = sm.returnDist || OVERVIEW_DIST;
             _core.dist = _core.tDist = returnDist;
             _core.sph.th = _core.tSph.th = returnTh;
             _core.sph.ph = _core.tSph.ph = THREE.MathUtils.clamp(returnPh, 0.01, Math.PI - 0.01);

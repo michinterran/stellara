@@ -43,17 +43,9 @@ const SLIDERS = [
 export function CosmicTuningPanel({
   tuning,
   onTuningChange,
-  isYTConnected,
-  isGoogleConnected,
-  onConnectYT,
-  onLoginGoogle,
-  authAction,
   language = 'ko',
   onLanguageChange,
   compact = false,
-  onManualSync,
-  syncMeta,
-  quotaMeta,
   hoverMode,
   onHoverModeToggle,
 }) {
@@ -158,58 +150,6 @@ export function CosmicTuningPanel({
             </p>
           </div>
 
-          <div
-            style={{
-              marginTop: 2,
-              padding: 14,
-              borderRadius: 16,
-              background: 'rgba(8,6,24,.66)',
-              border: '1px solid rgba(155,145,255,.14)',
-            }}
-          >
-            <div style={{ fontSize: 10, color: 'rgba(155,145,255,.42)', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-              {language === 'en' ? 'Library Sync' : '라이브러리 동기화'}
-            </div>
-            <div style={{ fontSize: 12, color: '#F0EEFF', lineHeight: 1.7 }}>
-              {syncMeta?.label || (language === 'en'
-                ? 'No sync has been completed yet.'
-                : '아직 라이브러리 동기화가 완료되지 않았습니다.')}
-            </div>
-            <div style={{ fontSize: 11, color: quotaMeta?.active ? '#FFD166' : 'rgba(196,189,255,.42)', lineHeight: 1.7, marginTop: 8 }}>
-              {quotaMeta?.active
-                ? (language === 'en'
-                  ? 'Quota protection mode is active until local midnight. Stellara will lean on cache-first playback.'
-                  : '쿼터 보호 모드가 자정까지 활성화되어 있습니다. 지금은 캐시 기반 라이브러리를 우선 사용합니다.')
-                : (language === 'en'
-                  ? 'Quota protection mode is currently inactive.'
-                  : '쿼터 보호 모드는 현재 비활성 상태입니다.')}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-              <MiniButton disabled={!isYTConnected || Boolean(authAction)} onClick={onManualSync}>
-                {authAction === 'sync-library'
-                  ? (language === 'en' ? 'Syncing...' : '동기화 중...')
-                  : (language === 'en' ? 'Sync Now' : '지금 동기화')}
-              </MiniButton>
-              {quotaMeta?.active && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '7px 10px',
-                    borderRadius: 999,
-                    border: '1px solid rgba(255,209,102,.18)',
-                    background: 'rgba(255,209,102,.08)',
-                    color: '#FFD166',
-                    fontSize: 10,
-                    letterSpacing: '.06em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {language === 'en' ? 'Quota Shield On' : '쿼터 보호 활성'}
-                </span>
-              )}
-            </div>
-          </div>
           <div
             style={{
               marginTop: 6,

@@ -2,9 +2,9 @@ import React from 'react';
 
 export const PLANET_PALETTE_OPTIONS = [
   { value: 'pastel', label: { ko: '파스텔 글로우', en: 'Pastel Glow' }, colors: { primary: '#B7F2D4', secondary: '#F2D5FF', accent: '#E7F9FF', glow: '#DCC6FF' } },
-  { value: 'vivid', label: { ko: '비비드 펄스', en: 'Vivid Pulse' }, colors: { primary: '#4FFFB2', secondary: '#54C6FF', accent: '#FFE36F', glow: '#9EF0FF' } },
-  { value: 'deep', label: { ko: '딥 오비트', en: 'Deep Orbit' }, colors: { primary: '#FF8A6C', secondary: '#7D5BFF', accent: '#FFCC88', glow: '#D29CFF' } },
-  { value: 'ember', label: { ko: '엠버 코어', en: 'Ember Core' }, colors: { primary: '#FF7A2F', secondary: '#FFC16B', accent: '#FFDDB1', glow: '#FFB05E' } },
+  { value: 'vivid', label: { ko: '비비드 펄스', en: 'Vivid Pulse' }, colors: { primary: '#62F7C8', secondary: '#55BEFF', accent: '#FFF0A6', glow: '#8BD7FF' } },
+  { value: 'deep', label: { ko: '딥 오비트', en: 'Deep Orbit' }, colors: { primary: '#7D5BFF', secondary: '#1E153C', accent: '#D8CBFF', glow: '#9F8CFF' } },
+  { value: 'ember', label: { ko: '엠버 코어', en: 'Ember Core' }, colors: { primary: '#FF7A2F', secondary: '#A33918', accent: '#FFD6A5', glow: '#FF9A53' } },
   { value: 'aurora', label: { ko: '오로라 미스트', en: 'Aurora Mist' }, colors: { primary: '#68FFD8', secondary: '#7AA8FF', accent: '#D7FFFB', glow: '#B7D4FF' } },
 ];
 
@@ -140,7 +140,7 @@ export function PlanetOrbitPreview({
         padding: compact ? 14 : 18,
         borderRadius: compact ? 20 : 24,
         background: 'linear-gradient(180deg, rgba(16,10,32,.96), rgba(7,4,18,.98))',
-        border: '1px solid rgba(244,151,44,.14)',
+        border: '1px solid rgba(123,112,224,.18)',
         overflow: 'hidden',
       }}
     >
@@ -287,12 +287,12 @@ export function PlanetOrbitPreview({
             padding: compact ? 14 : 16,
             borderRadius: 20,
             background: 'rgba(10,8,26,.82)',
-            border: '1px solid rgba(244,151,44,.16)',
+            border: '1px solid rgba(123,112,224,.18)',
             backdropFilter: 'blur(18px)',
           }}
         >
           {accentLabel && (
-            <div style={{ fontSize: 10, color: '#F5A548', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#C8BEFF', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 8 }}>
               {accentLabel}
             </div>
           )}
@@ -300,7 +300,7 @@ export function PlanetOrbitPreview({
             {title}
           </div>
           {subtitle && (
-            <div style={{ fontSize: 11, color: 'rgba(255,219,178,.76)', marginTop: 10, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 11, color: 'rgba(206,198,255,.76)', marginTop: 10, letterSpacing: '.08em', textTransform: 'uppercase' }}>
               {subtitle}
             </div>
           )}
@@ -329,9 +329,9 @@ export function OptionTileGroup({ options, value, onChange, language = 'ko', col
               minHeight: 72,
               padding: '10px 12px',
               borderRadius: 14,
-              border: `1px solid ${active ? 'rgba(244,151,44,.4)' : 'rgba(123,112,224,.16)'}`,
-              background: active ? 'linear-gradient(180deg, rgba(74,36,10,.82), rgba(36,16,8,.76))' : 'rgba(8,6,24,.72)',
-              color: active ? '#FFF4E6' : '#F0EEFF',
+              border: `1px solid ${active ? 'rgba(155,145,255,.42)' : 'rgba(123,112,224,.16)'}`,
+              background: active ? 'linear-gradient(180deg, rgba(42,30,94,.88), rgba(19,13,44,.86))' : 'rgba(8,6,24,.72)',
+              color: '#F0EEFF',
               cursor: 'pointer',
               textAlign: 'left',
               fontFamily: 'inherit',
@@ -339,7 +339,7 @@ export function OptionTileGroup({ options, value, onChange, language = 'ko', col
           >
             <div style={{ fontSize: 12, fontWeight: 500 }}>{getLabel(option, language)}</div>
             {option.description && (
-              <div style={{ fontSize: 10, color: active ? 'rgba(255,220,184,.72)' : 'rgba(196,189,255,.52)', lineHeight: 1.55, marginTop: 6 }}>
+              <div style={{ fontSize: 10, color: active ? 'rgba(224,219,255,.76)' : 'rgba(196,189,255,.52)', lineHeight: 1.55, marginTop: 6 }}>
                 {typeof option.description === 'string' ? option.description : option.description?.[language] || option.description?.ko}
               </div>
             )}
